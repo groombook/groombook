@@ -6,6 +6,7 @@ import {
   pgTable,
   text,
   timestamp,
+  unique,
   uuid,
 } from "drizzle-orm/pg-core";
 
@@ -49,6 +50,8 @@ export const clients = pgTable("clients", {
   phone: text("phone"),
   address: text("address"),
   notes: text("notes"),
+  // Set to true if the client has opted out of email reminders/notifications
+  emailOptOut: boolean("email_opt_out").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -159,3 +162,19 @@ export const invoiceLineItems = pgTable("invoice_line_items", {
   totalCents: integer("total_cents").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
+
+// Tracks which reminder emails have been sent per appointment (prevents duplicates).
+// reminder_type values: "confirmation", "24h", "2h"
+export const reminderLogs = pgTable(
+  "reminder_logs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    appointmentId: uuid("appointment_id")
+      .notNull()
+      .references(() => appointments.id, { onDelete: "cascade" }),
+    // "confirmation" | "24h" | "2h"
+    reminderType: text("reminder_type").notNull(),
+    sentAt: timestamp("sent_at").notNull().defaultNow(),
+  },
+  (t) => [unique().on(t.appointmentId, t.reminderType)]
+);

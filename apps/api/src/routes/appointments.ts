@@ -10,8 +10,14 @@ import {
   lte,
   ne,
   appointments,
+  clients,
+  pets,
   recurringSeries,
+  reminderLogs,
+  services,
+  staff,
 } from "@groombook/db";
+import { buildConfirmationEmail, sendEmail } from "../services/email.js";
 
 export const appointmentsRouter = new Hono();
 
@@ -189,9 +195,70 @@ appointmentsRouter.post(
       throw err;
     }
 
+    // Send confirmation email (fire-and-forget — never fails the request)
+    sendConfirmationEmail(db, firstRow).catch((err) => {
+      console.error("[appointments] Failed to send confirmation email:", err);
+    });
+
     return c.json(firstRow, 201);
   }
 );
+
+// ─── Confirmation email helper ─────────────────────────────────────────────
+
+async function sendConfirmationEmail(
+  db: ReturnType<typeof getDb>,
+  appt: typeof appointments.$inferSelect
+): Promise<void> {
+  const [client] = await db
+    .select({ name: clients.name, email: clients.email, emailOptOut: clients.emailOptOut })
+    .from(clients)
+    .where(eq(clients.id, appt.clientId))
+    .limit(1);
+
+  if (!client || !client.email || client.emailOptOut) return;
+
+  const [pet] = await db
+    .select({ name: pets.name })
+    .from(pets)
+    .where(eq(pets.id, appt.petId))
+    .limit(1);
+
+  const [service] = await db
+    .select({ name: services.name })
+    .from(services)
+    .where(eq(services.id, appt.serviceId))
+    .limit(1);
+
+  let groomerName: string | null = null;
+  if (appt.staffId) {
+    const [groomer] = await db
+      .select({ name: staff.name })
+      .from(staff)
+      .where(eq(staff.id, appt.staffId))
+      .limit(1);
+    groomerName = groomer?.name ?? null;
+  }
+
+  if (!pet || !service) return;
+
+  const sent = await sendEmail(
+    buildConfirmationEmail(client.email, {
+      clientName: client.name,
+      petName: pet.name,
+      serviceName: service.name,
+      groomerName,
+      startTime: appt.startTime,
+    })
+  );
+
+  if (sent) {
+    await db
+      .insert(reminderLogs)
+      .values({ appointmentId: appt.id, reminderType: "confirmation" })
+      .onConflictDoNothing();
+  }
+}
 
 appointmentsRouter.patch(
   "/:id",
