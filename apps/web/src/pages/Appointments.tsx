@@ -39,6 +39,18 @@ const STATUS_COLORS: Record<string, string> = {
   no_show: "#9ca3af",
 };
 
+const GROOMER_PALETTE = [
+  "#8b5cf6", // violet
+  "#0ea5e9", // sky
+  "#f43f5e", // rose
+  "#14b8a6", // teal
+  "#f97316", // orange
+  "#a855f7", // purple
+  "#84cc16", // lime
+  "#e879f9", // fuchsia
+];
+const UNASSIGNED_COLOR = "#94a3b8";
+
 const STATUS_TRANSITIONS: Record<string, string[]> = {
   scheduled: ["confirmed", "cancelled", "no_show"],
   confirmed: ["in_progress", "cancelled", "no_show"],
@@ -94,6 +106,10 @@ export function AppointmentsPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [selectedAppt, setSelectedAppt] = useState<Appointment | null>(null);
+  // Groomer view state
+  const [viewMode, setViewMode] = useState<"status" | "groomer">("status");
+  // null key = unassigned; staffId string = that groomer; undefined set = all visible
+  const [hiddenGroomers, setHiddenGroomers] = useState<Set<string | null>>(new Set());
 
   const weekEnd = addDays(weekStart, 6);
 
@@ -135,9 +151,35 @@ export function AppointmentsPage() {
 
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
+  // Assign a stable color to each active groomer by index
+  const activeGroomers = staff.filter((s) => s.active && s.role === "groomer");
+  const groomerColorMap = new Map<string, string>(
+    activeGroomers.map((s, i) => [s.id, GROOMER_PALETTE[i % GROOMER_PALETTE.length] ?? UNASSIGNED_COLOR])
+  );
+
+  function groomerColor(staffId: string | null): string {
+    if (!staffId) return UNASSIGNED_COLOR;
+    return groomerColorMap.get(staffId) ?? UNASSIGNED_COLOR;
+  }
+
+  function apptColor(a: Appointment): string {
+    return viewMode === "groomer" ? groomerColor(a.staffId) : (STATUS_COLORS[a.status] ?? "#94a3b8");
+  }
+
+  function toggleGroomer(key: string | null) {
+    setHiddenGroomers((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
+
   const apptsByDay = days.map((day) => {
     const dateStr = formatDate(day);
-    return appointments.filter((a) => a.startTime.startsWith(dateStr));
+    const dayAppts = appointments.filter((a) => a.startTime.startsWith(dateStr));
+    if (viewMode !== "groomer" || hiddenGroomers.size === 0) return dayAppts;
+    return dayAppts.filter((a) => !hiddenGroomers.has(a.staffId));
   });
 
   function openNewForm(date?: Date) {
@@ -252,6 +294,74 @@ export function AppointmentsPage() {
         </button>
       </div>
 
+      {/* ── View Mode + Groomer Filters ── */}
+      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.75rem", flexWrap: "wrap" }}>
+        <span style={{ fontSize: 13, fontWeight: 600, color: "#374151" }}>Color by:</span>
+        {(["status", "groomer"] as const).map((mode) => (
+          <button
+            key={mode}
+            onClick={() => setViewMode(mode)}
+            style={{
+              ...btnStyle,
+              backgroundColor: viewMode === mode ? "#1e293b" : "#f9fafb",
+              color: viewMode === mode ? "#fff" : "#374151",
+              borderColor: viewMode === mode ? "#1e293b" : "#d1d5db",
+            }}
+          >
+            {mode === "status" ? "Status" : "Groomer"}
+          </button>
+        ))}
+        {viewMode === "groomer" && (
+          <>
+            <span style={{ fontSize: 13, color: "#6b7280", marginLeft: "0.5rem" }}>Show:</span>
+            {activeGroomers.map((s) => {
+              const color = groomerColorMap.get(s.id) ?? UNASSIGNED_COLOR;
+              const visible = !hiddenGroomers.has(s.id);
+              return (
+                <button
+                  key={s.id}
+                  onClick={() => toggleGroomer(s.id)}
+                  title={visible ? `Hide ${s.name}` : `Show ${s.name}`}
+                  style={{
+                    ...btnStyle,
+                    backgroundColor: visible ? color : "#f1f5f9",
+                    color: visible ? "#fff" : "#94a3b8",
+                    borderColor: visible ? color : "#e2e8f0",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.3rem",
+                  }}
+                >
+                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: visible ? "#fff" : color, display: "inline-block" }} />
+                  {s.name}
+                </button>
+              );
+            })}
+            {/* Unassigned toggle */}
+            {(() => {
+              const visible = !hiddenGroomers.has(null);
+              return (
+                <button
+                  onClick={() => toggleGroomer(null)}
+                  style={{
+                    ...btnStyle,
+                    backgroundColor: visible ? UNASSIGNED_COLOR : "#f1f5f9",
+                    color: visible ? "#fff" : "#94a3b8",
+                    borderColor: visible ? UNASSIGNED_COLOR : "#e2e8f0",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.3rem",
+                  }}
+                >
+                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: visible ? "#fff" : UNASSIGNED_COLOR, display: "inline-block" }} />
+                  Unassigned
+                </button>
+              );
+            })()}
+          </>
+        )}
+      </div>
+
       {/* ── Weekly Calendar ── */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "0.5rem" }}>
         {days.map((day, i) => {
@@ -291,12 +401,13 @@ export function AppointmentsPage() {
                 {(apptsByDay[i] ?? []).map((a) => {
                   const svc = services.find((s) => s.id === a.serviceId);
                   const cli = clients.find((c) => c.id === a.clientId);
+                  const groomer = staff.find((s) => s.id === a.staffId);
                   return (
                     <div
                       key={a.id}
                       onClick={() => setSelectedAppt(a)}
                       style={{
-                        background: STATUS_COLORS[a.status] ?? "#94a3b8",
+                        background: apptColor(a),
                         color: "#fff",
                         borderRadius: 4,
                         padding: "0.2rem 0.35rem",
@@ -309,6 +420,11 @@ export function AppointmentsPage() {
                       <div style={{ fontWeight: 600 }}>{fmtTime(a.startTime)}</div>
                       <div>{cli?.name ?? "—"}</div>
                       <div style={{ opacity: 0.9 }}>{svc?.name ?? "—"}</div>
+                      {viewMode === "groomer" && (
+                        <div style={{ opacity: 0.85, fontSize: 10 }}>
+                          {groomer?.name ?? "Unassigned"}
+                        </div>
+                      )}
                       {a.seriesId && (
                         <div style={{ opacity: 0.85, fontSize: 10 }}>↻ recurring</div>
                       )}
