@@ -15,6 +15,18 @@ services:
       timeout: 5s
       retries: 5
 
+  migrate:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: migrate
+    environment:
+      DATABASE_URL: postgres://groombook:groombook@postgres:5432/groombook
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
   api:
     build:
       context: .
@@ -23,12 +35,14 @@ services:
       - "3000:3000"
     environment:
       DATABASE_URL: postgres://groombook:groombook@postgres:5432/groombook
-      OIDC_ISSUER: http://authentik:9000
-      OIDC_AUDIENCE: groombook
-      CORS_ORIGIN: http://localhost:5173
+      AUTH_DISABLED: "true"
+      CORS_ORIGIN: http://localhost:8080
+      PORT: "3000"
     depends_on:
       postgres:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
 
   web:
     build:

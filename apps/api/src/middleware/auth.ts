@@ -24,6 +24,12 @@ export interface JwtPayload {
 }
 
 export const authMiddleware: MiddlewareHandler = async (c, next) => {
+  if (process.env.AUTH_DISABLED === "true") {
+    c.set("jwtPayload", { sub: "dev-user" } as JwtPayload);
+    await next();
+    return;
+  }
+
   const authorization = c.req.header("Authorization");
   if (!authorization?.startsWith("Bearer ")) {
     return c.json({ error: "Unauthorized" }, 401);

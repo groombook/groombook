@@ -4,7 +4,7 @@ WORKDIR /app
 
 # Install deps
 FROM base AS deps
-COPY package.json pnpm-workspace.yaml ./
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY apps/api/package.json apps/api/
 COPY packages/db/package.json packages/db/
 COPY packages/types/package.json packages/types/
@@ -22,7 +22,7 @@ RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
 WORKDIR /app
 ENV NODE_ENV=production
 
-COPY package.json pnpm-workspace.yaml ./
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY apps/api/package.json apps/api/
 COPY packages/db/package.json packages/db/
 COPY packages/types/package.json packages/types/
@@ -34,3 +34,7 @@ COPY --from=builder /app/packages/types packages/types
 
 EXPOSE 3000
 CMD ["node", "apps/api/dist/index.js"]
+
+# Migrate stage — runs drizzle-kit migrate against the database
+FROM builder AS migrate
+CMD ["pnpm", "db:migrate"]
