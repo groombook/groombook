@@ -19,9 +19,15 @@ importers:
       '@hono/node-server':
         specifier: ^1.13.7
         version: 1.19.11(hono@4.12.8)
+      '@hono/zod-validator':
+        specifier: ^0.4.3
+        version: 0.4.3(hono@4.12.8)(zod@3.25.76)
       hono:
         specifier: ^4.6.17
         version: 4.12.8
+      jose:
+        specifier: ^5.9.6
+        version: 5.10.0
       openid-client:
         specifier: ^6.1.7
         version: 6.8.2
@@ -100,6 +106,9 @@ importers:
         specifier: ^3.4.5
         version: 3.4.8
     devDependencies:
+      '@types/node':
+        specifier: ^22.10.7
+        version: 22.19.15
       drizzle-kit:
         specifier: ^0.30.4
         version: 0.30.6
@@ -1265,6 +1274,12 @@ packages:
     peerDependencies:
       hono: ^4
 
+  '@hono/zod-validator@0.4.3':
+    resolution: {integrity: sha512-xIgMYXDyJ4Hj6ekm9T9Y27s080Nl9NXHcJkOvkXPhubOLj8hZkOL8pDnnXfvCf5xEE8Q4oMFenQUZZREUY2gqQ==}
+    peerDependencies:
+      hono: '>=3.9.0'
+      zod: ^3.19.1
+
   '@humanfs/core@0.19.1':
     resolution: {integrity: sha512-5DyQ4+1JEUzejeK1JGICcideyfUbGixgS9jNgex5nqkW+cY7WZhxBigmieN5Qnw9ZosSNVC9KQKyb+GUaGyKUA==}
     engines: {node: '>=18.18.0'}
@@ -2369,6 +2384,9 @@ packages:
     resolution: {integrity: sha512-wpHYzhxiVQL+IV05BLE2Xn34zW1S223hvjtqk0+gsPrwd/8JNLXJgZZM/iPFsYc1xyphF+6M6EvdE5E9MBGkDA==}
     engines: {node: '>=10'}
     hasBin: true
+
+  jose@5.10.0:
+    resolution: {integrity: sha512-s+3Al/p9g32Iq+oqXxkW//7jk2Vig6FF1CFqzVXoTUXt2qz89YWbL+OwS17NFYEvxC35n0FKeGO2LGYSxeM2Gg==}
 
   jose@6.2.1:
     resolution: {integrity: sha512-jUaKr1yrbfaImV7R2TN/b3IcZzsw38/chqMpo2XJ7i2F8AfM/lA4G1goC3JVEwg0H7UldTmSt3P68nt31W7/mw==}
@@ -4171,6 +4189,11 @@ snapshots:
     dependencies:
       hono: 4.12.8
 
+  '@hono/zod-validator@0.4.3(hono@4.12.8)(zod@3.25.76)':
+    dependencies:
+      hono: 4.12.8
+      zod: 3.25.76
+
   '@humanfs/core@0.19.1': {}
 
   '@humanfs/node@0.16.7':
@@ -5366,6 +5389,8 @@ snapshots:
       async: 3.2.6
       filelist: 1.0.6
       picocolors: 1.1.1
+
+  jose@5.10.0: {}
 
   jose@6.2.1: {}
 

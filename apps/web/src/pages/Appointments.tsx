@@ -268,7 +268,7 @@ export function AppointmentsPage() {
                 </button>
               </div>
               <div style={{ padding: "0.3rem" }}>
-                {apptsByDay[i].map((a) => {
+                {(apptsByDay[i] ?? []).map((a) => {
                   const svc = services.find((s) => s.id === a.serviceId);
                   const cli = clients.find((c) => c.id === a.clientId);
                   return (

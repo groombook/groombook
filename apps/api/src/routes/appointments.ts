@@ -1,8 +1,7 @@
 import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
-import { and, eq, gte, lt, lte, ne } from "drizzle-orm";
-import { getDb, appointments } from "@groombook/db";
+import { and, eq, getDb, gte, lt, lte, ne, appointments } from "@groombook/db";
 
 export const appointmentsRouter = new Hono();
 
@@ -144,13 +143,12 @@ appointmentsRouter.patch(
         .from(appointments)
         .where(eq(appointments.id, id))
         .limit(1);
-      if (existing.length === 0) return c.json({ error: "Not found" }, 404);
+      const current = existing[0];
+      if (!current) return c.json({ error: "Not found" }, 404);
 
-      const start = body.startTime
-        ? new Date(body.startTime)
-        : existing[0].startTime;
-      const end = body.endTime ? new Date(body.endTime) : existing[0].endTime;
-      const staffId = body.staffId ?? existing[0].staffId;
+      const start = body.startTime ? new Date(body.startTime) : current.startTime;
+      const end = body.endTime ? new Date(body.endTime) : current.endTime;
+      const staffId = body.staffId ?? current.staffId;
 
       if (end <= start) {
         return c.json({ error: "endTime must be after startTime" }, 422);
