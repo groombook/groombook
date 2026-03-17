@@ -96,6 +96,49 @@ pnpm build
 
 ## Self-Hosting
 
+### Docker Compose (recommended for single-server deployments)
+
+The fastest way to run Groom Book is with Docker Compose. This starts PostgreSQL, runs database migrations, and serves both the API and web frontend.
+
+```bash
+git clone https://github.com/groombook/groombook.git
+cd groombook
+
+# Start everything (Postgres + migrate + API + web)
+docker compose up --build
+```
+
+- **Web UI**: http://localhost:8080
+- **API**: http://localhost:3000
+
+The default `docker-compose.yml` sets `AUTH_DISABLED=true` so you can explore the app without configuring an OIDC provider. **Disable this in any internet-facing deployment.**
+
+#### Production configuration
+
+Copy `.env.example` to `.env` and configure:
+
+```bash
+cp .env.example .env
+```
+
+Key variables to update for production:
+
+| Variable | Description |
+|---|---|
+| `DATABASE_URL` | PostgreSQL connection string |
+| `AUTH_DISABLED` | Set to `false` in production |
+| `OIDC_ISSUER` | Authentik issuer URL |
+| `OIDC_AUDIENCE` | OAuth2 audience (default: `groombook`) |
+| `CORS_ORIGIN` | Public URL of the web frontend |
+
+To use your `.env` file with Docker Compose:
+
+```bash
+docker compose --env-file .env up --build
+```
+
+### Kubernetes (production-grade deployments)
+
 See the [groombook/infra](https://github.com/groombook/infra) repository for Kubernetes manifests and Flux configuration.
 
 Groom Book is deployed in the `groombook` Kubernetes namespace using:
