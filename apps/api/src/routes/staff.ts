@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
-import { eq, getDb, staff } from "@groombook/db";
+import { and, eq, getDb, ne, staff, appointments } from "@groombook/db";
 
 export const staffRouter = new Hono();
 
@@ -55,9 +55,33 @@ staffRouter.patch("/:id", zValidator("json", updateStaffSchema), async (c) => {
 
 staffRouter.delete("/:id", async (c) => {
   const db = getDb();
+  const id = c.req.param("id");
+
+  // Prevent deleting staff who have existing non-cancelled appointments (fixes #21).
+  const activeAppointments = await db
+    .select({ id: appointments.id })
+    .from(appointments)
+    .where(
+      and(
+        eq(appointments.staffId, id),
+        ne(appointments.status, "cancelled"),
+        ne(appointments.status, "no_show"),
+      )
+    )
+    .limit(1);
+  if (activeAppointments.length > 0) {
+    return c.json(
+      {
+        error:
+          "Cannot delete staff member with existing appointments. Reassign or cancel their appointments first.",
+      },
+      409
+    );
+  }
+
   const [row] = await db
     .delete(staff)
-    .where(eq(staff.id, c.req.param("id")))
+    .where(eq(staff.id, id))
     .returning();
   if (!row) return c.json({ error: "Not found" }, 404);
   return c.json({ ok: true });

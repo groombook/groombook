@@ -23,6 +23,21 @@ export interface JwtPayload {
   name?: string;
 }
 
+// Guard: refuse to start with AUTH_DISABLED in production (fixes #22).
+if (process.env.AUTH_DISABLED === "true") {
+  if (process.env.NODE_ENV === "production") {
+    console.error(
+      "[FATAL] AUTH_DISABLED=true is not allowed in production. " +
+        "Remove AUTH_DISABLED from your environment and configure OIDC_ISSUER."
+    );
+    process.exit(1);
+  }
+  console.warn(
+    "[WARNING] AUTH_DISABLED=true — authentication is bypassed. " +
+      "Do NOT use this in production."
+  );
+}
+
 export const authMiddleware: MiddlewareHandler = async (c, next) => {
   if (process.env.AUTH_DISABLED === "true") {
     c.set("jwtPayload", { sub: "dev-user" } as JwtPayload);
