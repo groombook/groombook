@@ -15,6 +15,7 @@ export interface Client {
   phone: string | null;
   address: string | null;
   notes: string | null;
+  emailOptOut: boolean;
   createdAt: string;
   updatedAt: string;
 }

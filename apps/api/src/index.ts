@@ -10,6 +10,7 @@ import { staffRouter } from "./routes/staff.js";
 import { invoicesRouter } from "./routes/invoices.js";
 import { bookRouter } from "./routes/book.js";
 import { authMiddleware } from "./middleware/auth.js";
+import { startReminderScheduler } from "./services/reminders.js";
 
 const app = new Hono();
 
@@ -43,5 +44,8 @@ api.route("/invoices", invoicesRouter);
 const port = Number(process.env.PORT ?? 3000);
 console.log(`API server listening on port ${port}`);
 serve({ fetch: app.fetch, port });
+
+// Start background reminder scheduler (runs every minute to check for upcoming appointments)
+startReminderScheduler();
 
 export default app;

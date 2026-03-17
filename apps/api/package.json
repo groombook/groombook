@@ -18,11 +18,15 @@
     "@hono/zod-validator": "^0.4.3",
     "hono": "^4.6.17",
     "jose": "^5.9.6",
+    "node-cron": "^3.0.3",
+    "nodemailer": "^6.9.16",
     "openid-client": "^6.1.7",
     "zod": "^3.24.1"
   },
   "devDependencies": {
     "@types/node": "^22.10.7",
+    "@types/node-cron": "^3.0.11",
+    "@types/nodemailer": "^6.4.17",
     "eslint": "^9.18.0",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3",

@@ -1,0 +1,128 @@
+import nodemailer from "nodemailer";
+import type Mail from "nodemailer/lib/mailer/index.js";
+
+// Returns null when SMTP is not configured — callers skip sending silently.
+function createTransport(): nodemailer.Transporter | null {
+  const host = process.env.SMTP_HOST;
+  if (!host) return null;
+
+  return nodemailer.createTransport({
+    host,
+    port: Number(process.env.SMTP_PORT ?? 587),
+    secure: process.env.SMTP_SECURE === "true",
+    auth:
+      process.env.SMTP_USER
+        ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+        : undefined,
+  });
+}
+
+let _transport: nodemailer.Transporter | null | undefined;
+
+function getTransport(): nodemailer.Transporter | null {
+  if (_transport === undefined) _transport = createTransport();
+  return _transport;
+}
+
+const FROM = process.env.SMTP_FROM ?? "Groom Book <noreply@groombook.local>";
+
+export async function sendEmail(opts: Mail.Options): Promise<boolean> {
+  const transport = getTransport();
+  if (!transport) return false; // SMTP not configured — skip silently
+
+  await transport.sendMail({ from: FROM, ...opts });
+  return true;
+}
+
+// ─── Email templates ──────────────────────────────────────────────────────────
+
+interface AppointmentEmailData {
+  clientName: string;
+  petName: string;
+  serviceName: string;
+  groomerName: string | null;
+  startTime: Date;
+}
+
+function formatDateTime(d: Date): string {
+  return d.toLocaleString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+export function buildConfirmationEmail(
+  to: string,
+  data: AppointmentEmailData
+): Mail.Options {
+  const time = formatDateTime(data.startTime);
+  const groomer = data.groomerName ? ` with ${data.groomerName}` : "";
+  return {
+    to,
+    subject: `Appointment Confirmed — ${data.petName} on ${data.startTime.toLocaleDateString()}`,
+    text: [
+      `Hi ${data.clientName},`,
+      ``,
+      `Your appointment has been confirmed!`,
+      ``,
+      `  Pet:      ${data.petName}`,
+      `  Service:  ${data.serviceName}`,
+      `  When:     ${time}${groomer}`,
+      ``,
+      `We look forward to seeing you. If you need to reschedule, please contact us.`,
+      ``,
+      `— Groom Book`,
+    ].join("\n"),
+    html: `
+<p>Hi ${data.clientName},</p>
+<p>Your appointment has been confirmed!</p>
+<table style="border-collapse:collapse;margin:1em 0">
+  <tr><td style="padding:4px 12px 4px 0;font-weight:600;color:#6b7280">Pet</td><td>${data.petName}</td></tr>
+  <tr><td style="padding:4px 12px 4px 0;font-weight:600;color:#6b7280">Service</td><td>${data.serviceName}</td></tr>
+  <tr><td style="padding:4px 12px 4px 0;font-weight:600;color:#6b7280">When</td><td>${time}${groomer}</td></tr>
+</table>
+<p>We look forward to seeing you. If you need to reschedule, please contact us.</p>
+<p>— Groom Book</p>`,
+  };
+}
+
+export function buildReminderEmail(
+  to: string,
+  data: AppointmentEmailData,
+  hoursAhead: number
+): Mail.Options {
+  const time = formatDateTime(data.startTime);
+  const groomer = data.groomerName ? ` with ${data.groomerName}` : "";
+  const when = hoursAhead >= 24 ? `tomorrow` : `in ${hoursAhead} hours`;
+  return {
+    to,
+    subject: `Reminder: ${data.petName}'s appointment is ${when}`,
+    text: [
+      `Hi ${data.clientName},`,
+      ``,
+      `Just a reminder that ${data.petName}'s grooming appointment is ${when}.`,
+      ``,
+      `  Pet:      ${data.petName}`,
+      `  Service:  ${data.serviceName}`,
+      `  When:     ${time}${groomer}`,
+      ``,
+      `See you soon!`,
+      ``,
+      `— Groom Book`,
+    ].join("\n"),
+    html: `
+<p>Hi ${data.clientName},</p>
+<p>Just a reminder that <strong>${data.petName}</strong>'s grooming appointment is <strong>${when}</strong>.</p>
+<table style="border-collapse:collapse;margin:1em 0">
+  <tr><td style="padding:4px 12px 4px 0;font-weight:600;color:#6b7280">Pet</td><td>${data.petName}</td></tr>
+  <tr><td style="padding:4px 12px 4px 0;font-weight:600;color:#6b7280">Service</td><td>${data.serviceName}</td></tr>
+  <tr><td style="padding:4px 12px 4px 0;font-weight:600;color:#6b7280">When</td><td>${time}${groomer}</td></tr>
+</table>
+<p>See you soon!</p>
+<p>— Groom Book</p>`,
+  };
+}
