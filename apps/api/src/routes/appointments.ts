@@ -138,14 +138,17 @@ appointmentsRouter.post(
             .insert(appointments)
             .values({ ...apptFields, startTime: start, endTime: end })
             .returning();
+          if (!inserted) throw new Error("Insert failed");
           return inserted;
         }
 
         // Create recurring series
-        const [series] = await tx
+        const seriesRows = await tx
           .insert(recurringSeries)
           .values({ frequencyWeeks: recurrence.frequencyWeeks })
           .returning();
+        const series = seriesRows[0];
+        if (!series) throw new Error("Failed to create recurring series");
 
         const durationMs = end.getTime() - start.getTime();
         const intervalMs =
@@ -170,7 +173,8 @@ appointmentsRouter.post(
           if (i === 0) first = inserted;
         }
 
-        return first!;
+        if (!first) throw new Error("No appointments created");
+        return first;
       });
     } catch (err: unknown) {
       if (
