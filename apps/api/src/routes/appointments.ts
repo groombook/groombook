@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
-import { and, eq, gte, lt, lte, ne, or } from "drizzle-orm";
+import { and, eq, gte, lt, lte, ne } from "drizzle-orm";
 import { getDb, appointments } from "@groombook/db";
 
 export const appointmentsRouter = new Hono();

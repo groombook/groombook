@@ -91,7 +91,7 @@ export function AppointmentsPage() {
 
   const loadAppointments = useCallback(() => {
     const from = weekStart.toISOString();
-    const to = addDays(weekEnd, 1).toISOString();
+    const to = addDays(weekStart, 7).toISOString();
     return fetch(`/api/appointments?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`)
       .then((r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
