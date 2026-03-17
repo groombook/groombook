@@ -200,9 +200,7 @@ export function ReportsPage() {
     }
   }
 
-  useEffect(() => {
-    loadAll();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { loadAll(); }, []); // run on mount only
 
   function exportCsv(type: "revenue" | "appointments" | "services") {
     const qs = buildQuery(fromDate, toDate, { type });
