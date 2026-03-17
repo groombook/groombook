@@ -10,7 +10,6 @@ import {
   invoiceTipSplits,
   appointments,
   services,
-  staff,
 } from "@groombook/db";
 
 export const invoicesRouter = new Hono();
