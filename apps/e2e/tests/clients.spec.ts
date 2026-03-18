@@ -54,6 +54,6 @@ test("clicking a client shows their details", async ({ page }) => {
   await page.goto("/clients");
   await expect(page.getByText("Alice Johnson")).toBeVisible();
   await page.getByText("Alice Johnson").click();
-  // Client detail panel shows their email
-  await expect(page.getByText("alice@example.com")).toBeVisible();
+  // Email appears in both the list row and the detail panel once selected
+  await expect(page.getByText("alice@example.com")).toHaveCount(2);
 });
