@@ -34,7 +34,7 @@ test.beforeEach(async ({ page }) => {
     route.fulfill({ json: MOCK_CLIENTS })
   );
   // Pets loaded when a client is selected
-  await page.route("/api/clients/*/pets", (route) =>
+  await page.route("/api/pets**", (route) =>
     route.fulfill({ json: [] })
   );
 });
