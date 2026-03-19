@@ -5,6 +5,8 @@ const originalFetch = window.fetch;
 /**
  * Patches global fetch to include X-Dev-User-Id header on API requests
  * when a dev user is selected via the login selector.
+ *
+ * Intentionally mutates window.fetch — this is dev-only (AUTH_DISABLED=true).
  */
 export function installDevFetchInterceptor() {
   window.fetch = function (input: RequestInfo | URL, init?: RequestInit) {
