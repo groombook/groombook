@@ -13,7 +13,6 @@ const createClientSchema = z.object({
   notes: z.string().max(2000).optional(),
 });
 
-const updateClientSchema = createClientSchema.partial();
 
 // List clients — defaults to active only, ?includeDisabled=true shows all
 clientsRouter.get("/", async (c) => {
