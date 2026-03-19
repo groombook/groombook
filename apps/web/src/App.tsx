@@ -7,6 +7,7 @@ import { InvoicesPage } from "./pages/Invoices.js";
 import { BookPage } from "./pages/Book.js";
 import { ReportsPage } from "./pages/Reports.js";
 import { GroupBookingPage } from "./pages/GroupBooking.js";
+import { CustomerPortal } from "./portal/CustomerPortal.js";
 
 const NAV_LINKS = [
   { to: "/", label: "Appointments" },
@@ -16,6 +17,7 @@ const NAV_LINKS = [
   { to: "/invoices", label: "Invoices" },
   { to: "/group-bookings", label: "Group Bookings" },
   { to: "/reports", label: "Reports" },
+  { to: "/portal", label: "Customer Portal" },
 ];
 
 export function App() {
@@ -80,6 +82,7 @@ export function App() {
           <Route path="/book" element={<BookPage />} />
           <Route path="/group-bookings" element={<GroupBookingPage />} />
           <Route path="/reports" element={<ReportsPage />} />
+          <Route path="/portal" element={<CustomerPortal />} />
         </Routes>
       </main>
     </div>
