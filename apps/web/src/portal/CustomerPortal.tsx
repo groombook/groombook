@@ -14,6 +14,7 @@ import { ImpersonationBanner } from "./ImpersonationBanner.js";
 import { AuditLogViewer } from "./AuditLogViewer.js";
 import type { ImpersonationSession, AuditEntry } from "./mockData.js";
 import { CUSTOMER } from "./mockData.js";
+import { useBranding } from "../BrandingContext.js";
 
 type Section = "dashboard" | "appointments" | "pets" | "reports" | "billing" | "messages" | "settings";
 
@@ -98,6 +99,7 @@ export function CustomerPortal() {
   const [showAuditLog, setShowAuditLog] = useState(false);
   const [showImpersonationSetup, setShowImpersonationSetup] = useState(false);
   const [impersonation, dispatchImpersonation] = useReducer(impersonationReducer, null);
+  const { branding } = useBranding();
 
   const logPageView = useCallback((page: string) => {
     if (impersonation?.active) {
@@ -180,8 +182,8 @@ export function CustomerPortal() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={mobileNavOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"} />
           </svg>
         </button>
-        <span className="text-lg font-semibold text-stone-800">Paws & Reflect</span>
-        <div className="w-8 h-8 rounded-full bg-[#8b7355] flex items-center justify-center text-white text-sm font-medium">
+        <span className="text-lg font-semibold text-stone-800">{branding.businessName}</span>
+        <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium" style={{ background: branding.accentColor }}>
           SM
         </div>
       </header>
@@ -195,11 +197,19 @@ export function CustomerPortal() {
           flex flex-col transition-transform duration-200
         `}>
           <div className="hidden md:flex items-center gap-3 px-6 py-5 border-b border-stone-100">
-            <div className="w-10 h-10 rounded-xl bg-[#8b7355] flex items-center justify-center text-white text-lg">
-              🐾
-            </div>
+            {branding.logoBase64 && branding.logoMimeType ? (
+              <img
+                src={`data:${branding.logoMimeType};base64,${branding.logoBase64}`}
+                alt=""
+                className="w-10 h-10 rounded-xl object-contain"
+              />
+            ) : (
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white text-lg" style={{ background: branding.accentColor }}>
+                🐾
+              </div>
+            )}
             <div>
-              <div className="font-semibold text-stone-800 text-sm">Paws & Reflect</div>
+              <div className="font-semibold text-stone-800 text-sm">{branding.businessName}</div>
               <div className="text-xs text-stone-500">Grooming</div>
             </div>
           </div>
@@ -214,7 +224,7 @@ export function CustomerPortal() {
                   className={`
                     w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
                     ${active
-                      ? "bg-[#f0ebe4] text-[#6b5a42]"
+                      ? "bg-stone-100 text-stone-800 font-semibold"
                       : "text-stone-600 hover:bg-stone-50 hover:text-stone-900"
                     }
                   `}
@@ -270,7 +280,7 @@ export function CustomerPortal() {
             </div>
             <div className="flex items-center gap-3">
               <span className="text-sm text-stone-600">Hi, {CUSTOMER.name.split(" ")[0]}</span>
-              <div className="w-8 h-8 rounded-full bg-[#8b7355] flex items-center justify-center text-white text-sm font-medium">
+              <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium" style={{ background: branding.accentColor }}>
                 SM
               </div>
             </div>

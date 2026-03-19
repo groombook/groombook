@@ -145,6 +145,17 @@ export interface Invoice {
   tipSplits?: InvoiceTipSplit[];
 }
 
+export interface BusinessSettings {
+  id: string;
+  businessName: string;
+  logoBase64: string | null;
+  logoMimeType: string | null;
+  primaryColor: string;
+  accentColor: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // Paginated list response
 export interface PaginatedList<T> {
   items: T[];

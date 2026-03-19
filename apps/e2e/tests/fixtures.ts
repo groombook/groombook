@@ -16,6 +16,18 @@ export const test = base.extend({
     await page.route("**/api/dev/config", (route) =>
       route.fulfill({ json: { authDisabled: false } })
     );
+    // Mock the branding endpoint so BrandingProvider resolves immediately
+    await page.route("**/api/branding", (route) =>
+      route.fulfill({
+        json: {
+          businessName: "GroomBook",
+          primaryColor: "#4f8a6f",
+          accentColor: "#8b7355",
+          logoBase64: null,
+          logoMimeType: null,
+        },
+      })
+    );
     // Seed localStorage as a fallback in case the mock is bypassed
     await page.addInitScript(() => {
       localStorage.setItem(
