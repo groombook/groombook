@@ -1,40 +1,51 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, within, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { App } from "../App.js";
 
-// Prevent fetch errors from page components loading data on mount
+// Mock fetch to return appropriate responses based on URL
 beforeEach(() => {
-  global.fetch = vi.fn().mockResolvedValue({
-    ok: true,
-    json: async () => [],
-  } as unknown as Response);
+  localStorage.clear();
+  global.fetch = vi.fn((url: string) => {
+    if (url === "/api/dev/config") {
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ authDisabled: false }),
+      } as Response);
+    }
+    return Promise.resolve({
+      ok: true,
+      json: async () => [],
+    } as Response);
+  }) as unknown as typeof fetch;
 });
 
-function renderApp(route = "/admin") {
+async function renderApp(route = "/admin") {
   render(
     <MemoryRouter initialEntries={[route]}>
       <App />
     </MemoryRouter>
   );
-  return screen.getByRole("navigation");
+  // Wait for the config fetch to resolve
+  const nav = await screen.findByRole("navigation");
+  return nav;
 }
 
 describe("App navigation", () => {
-  it("renders the Groom Book brand", () => {
-    const nav = renderApp();
+  it("renders the Groom Book brand", async () => {
+    const nav = await renderApp();
     expect(
       within(nav).getByText((_, el) => el?.tagName === "STRONG" && /Groom\s*Book/.test(el.textContent ?? ""))
     ).toBeInTheDocument();
   });
 
-  it("renders the Book CTA button", () => {
-    const nav = renderApp();
+  it("renders the Book CTA button", async () => {
+    const nav = await renderApp();
     expect(within(nav).getByRole("link", { name: "Book" })).toBeInTheDocument();
   });
 
-  it("renders all primary nav links", () => {
-    const nav = renderApp();
+  it("renders all primary nav links", async () => {
+    const nav = await renderApp();
     const expectedLinks = [
       "Appointments",
       "Clients",
@@ -49,22 +60,84 @@ describe("App navigation", () => {
     });
   });
 
-  it("highlights the active route link", () => {
-    const nav = renderApp("/admin/clients");
+  it("highlights the active route link", async () => {
+    const nav = await renderApp("/admin/clients");
     const clientsLink = within(nav).getByText("Clients");
     // Active links use fontWeight 600
     expect(clientsLink).toHaveStyle({ fontWeight: "600" });
   });
 
-  it("renders customer portal at root", () => {
+  it("renders customer portal at root", async () => {
     render(
       <MemoryRouter initialEntries={["/"]}>
         <App />
       </MemoryRouter>
     );
     // Customer portal should render at root - no admin nav present
+    await waitFor(() => {
+      expect(
+        screen.queryByText((_, el) => el?.tagName === "STRONG" && /Groom\s*Book/.test(el.textContent ?? ""))
+      ).not.toBeInTheDocument();
+    });
+  });
+});
+
+describe("Dev login selector", () => {
+  it("redirects to /login when auth is disabled and no user selected", async () => {
+    global.fetch = vi.fn((url: string) => {
+      if (url === "/api/dev/config") {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ authDisabled: true }),
+        } as Response);
+      }
+      if (url === "/api/dev/users") {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            staff: [{ id: "s1", name: "Sarah", email: "sarah@test.com", role: "groomer" }],
+            clients: [{ id: "c1", name: "Client A", email: "a@test.com", petCount: 2 }],
+          }),
+        } as Response);
+      }
+      return Promise.resolve({ ok: true, json: async () => [] } as Response);
+    }) as unknown as typeof fetch;
+
+    render(
+      <MemoryRouter initialEntries={["/admin"]}>
+        <App />
+      </MemoryRouter>
+    );
+
+    // Should redirect to login selector and show dev login UI
+    await screen.findByText("Dev Login Selector");
+    expect(screen.getByText("Sarah")).toBeInTheDocument();
+    expect(screen.getByText("Client A")).toBeInTheDocument();
+  });
+
+  it("does not redirect when a dev user is already selected", async () => {
+    localStorage.setItem("dev-user", JSON.stringify({ type: "staff", id: "s1", name: "Sarah" }));
+
+    global.fetch = vi.fn((url: string) => {
+      if (url === "/api/dev/config") {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ authDisabled: true }),
+        } as Response);
+      }
+      return Promise.resolve({ ok: true, json: async () => [] } as Response);
+    }) as unknown as typeof fetch;
+
+    render(
+      <MemoryRouter initialEntries={["/admin"]}>
+        <App />
+      </MemoryRouter>
+    );
+
+    // Should show admin nav, not login selector
+    const nav = await screen.findByRole("navigation");
     expect(
-      screen.queryByText((_, el) => el?.tagName === "STRONG" && /Groom\s*Book/.test(el.textContent ?? ""))
-    ).not.toBeInTheDocument();
+      within(nav).getByText((_, el) => el?.tagName === "STRONG" && /Groom\s*Book/.test(el.textContent ?? ""))
+    ).toBeInTheDocument();
   });
 });

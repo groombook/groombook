@@ -40,7 +40,9 @@ if (process.env.AUTH_DISABLED === "true") {
 
 export const authMiddleware: MiddlewareHandler = async (c, next) => {
   if (process.env.AUTH_DISABLED === "true") {
-    c.set("jwtPayload", { sub: "dev-user" } as JwtPayload);
+    const devUserId = c.req.header("X-Dev-User-Id");
+    const sub = devUserId ?? "dev-user";
+    c.set("jwtPayload", { sub } as JwtPayload);
     await next();
     return;
   }
