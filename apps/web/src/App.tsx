@@ -8,9 +8,11 @@ import { InvoicesPage } from "./pages/Invoices.js";
 import { BookPage } from "./pages/Book.js";
 import { ReportsPage } from "./pages/Reports.js";
 import { GroupBookingPage } from "./pages/GroupBooking.js";
+import { SettingsPage } from "./pages/Settings.js";
 import { CustomerPortal } from "./portal/CustomerPortal.js";
 import { DevLoginSelector, getDevUser } from "./pages/DevLoginSelector.js";
 import { DevSessionIndicator } from "./components/DevSessionIndicator.js";
+import { BrandingProvider, useBranding } from "./BrandingContext.js";
 
 const NAV_LINKS = [
   { to: "/admin", label: "Appointments" },
@@ -20,11 +22,18 @@ const NAV_LINKS = [
   { to: "/admin/invoices", label: "Invoices" },
   { to: "/admin/group-bookings", label: "Group Bookings" },
   { to: "/admin/reports", label: "Reports" },
+  { to: "/admin/settings", label: "Settings" },
   { to: "/", label: "Customer Portal" },
 ];
 
 function AdminLayout() {
   const location = useLocation();
+  const { branding } = useBranding();
+
+  const logoSrc = branding.logoBase64 && branding.logoMimeType
+    ? `data:${branding.logoMimeType};base64,${branding.logoBase64}`
+    : null;
+
   return (
     <div style={{ minHeight: "100vh", fontFamily: "system-ui, sans-serif", background: "#f0f2f5" }}>
       <nav
@@ -42,14 +51,23 @@ function AdminLayout() {
           zIndex: 50,
         }}
       >
-        <strong style={{
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
           marginRight: "1.25rem",
-          fontSize: 17,
-          color: "#1a202c",
-          letterSpacing: "-0.02em",
         }}>
-          <span style={{ color: "#4f8a6f" }}>Groom</span>Book
-        </strong>
+          {logoSrc && (
+            <img src={logoSrc} alt="" style={{ width: 24, height: 24, objectFit: "contain" }} />
+          )}
+          <strong style={{
+            fontSize: 17,
+            color: "#1a202c",
+            letterSpacing: "-0.02em",
+          }}>
+            {branding.businessName}
+          </strong>
+        </div>
         <Link
           to="/admin/book"
           style={{
@@ -59,7 +77,7 @@ function AdminLayout() {
             fontSize: 13,
             fontWeight: 600,
             color: "#fff",
-            background: "linear-gradient(135deg, #4f8a6f, #3d7a5f)",
+            background: branding.primaryColor,
             marginRight: "0.5rem",
             boxShadow: "0 1px 2px rgba(79, 138, 111, 0.3)",
           }}
@@ -100,6 +118,7 @@ function AdminLayout() {
           <Route path="/book" element={<BookPage />} />
           <Route path="/group-bookings" element={<GroupBookingPage />} />
           <Route path="/reports" element={<ReportsPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
         </Routes>
       </main>
     </div>
@@ -130,21 +149,21 @@ export function App() {
     return <Navigate to="/login" replace />;
   }
 
-  if (location.pathname.startsWith("/admin")) {
-    return (
-      <>
-        <Routes>
-          <Route path="/admin/*" element={<AdminLayout />} />
-        </Routes>
-        {authDisabled && <DevSessionIndicator />}
-      </>
-    );
-  }
-
   return (
-    <>
-      <CustomerPortal />
-      {authDisabled && <DevSessionIndicator />}
-    </>
+    <BrandingProvider>
+      {location.pathname.startsWith("/admin") ? (
+        <>
+          <Routes>
+            <Route path="/admin/*" element={<AdminLayout />} />
+          </Routes>
+          {authDisabled && <DevSessionIndicator />}
+        </>
+      ) : (
+        <>
+          <CustomerPortal />
+          {authDisabled && <DevSessionIndicator />}
+        </>
+      )}
+    </BrandingProvider>
   );
 }

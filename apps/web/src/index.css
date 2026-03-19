@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+:root {
+  --color-primary: #4f8a6f;
+  --color-accent: #8b7355;
+}
+
 *, *::before, *::after {
   box-sizing: border-box;
 }
@@ -16,7 +21,7 @@ body {
 }
 
 a {
-  color: #3d7a5f;
+  color: var(--color-primary);
   text-decoration: none;
 }
 

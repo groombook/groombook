@@ -218,6 +218,17 @@ export const reminderLogs = pgTable(
   (t) => [unique().on(t.appointmentId, t.reminderType)]
 );
 
+export const businessSettings = pgTable("business_settings", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  businessName: text("business_name").notNull().default("GroomBook"),
+  logoBase64: text("logo_base64"),
+  logoMimeType: text("logo_mime_type"),
+  primaryColor: text("primary_color").notNull().default("#4f8a6f"),
+  accentColor: text("accent_color").notNull().default("#8b7355"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
 export const groomingVisitLogs = pgTable("grooming_visit_logs", {
   id: uuid("id").primaryKey().defaultRandom(),
   petId: uuid("pet_id")
