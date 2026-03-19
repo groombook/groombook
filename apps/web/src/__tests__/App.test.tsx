@@ -23,12 +23,14 @@ function renderApp(route = "/admin") {
 describe("App navigation", () => {
   it("renders the Groom Book brand", () => {
     const nav = renderApp();
-    expect(within(nav).getByText("Groom Book")).toBeInTheDocument();
+    expect(
+      within(nav).getByText((_, el) => el?.tagName === "STRONG" && /Groom\s*Book/.test(el.textContent ?? ""))
+    ).toBeInTheDocument();
   });
 
   it("renders the Book CTA button", () => {
     const nav = renderApp();
-    expect(within(nav).getByText("Book")).toBeInTheDocument();
+    expect(within(nav).getByRole("link", { name: "Book" })).toBeInTheDocument();
   });
 
   it("renders all primary nav links", () => {
@@ -61,6 +63,8 @@ describe("App navigation", () => {
       </MemoryRouter>
     );
     // Customer portal should render at root - no admin nav present
-    expect(screen.queryByText("Groom Book")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText((_, el) => el?.tagName === "STRONG" && /Groom\s*Book/.test(el.textContent ?? ""))
+    ).not.toBeInTheDocument();
   });
 });
