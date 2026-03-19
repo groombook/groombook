@@ -13,6 +13,7 @@ import { reportsRouter } from "./routes/reports.js";
 import { appointmentGroupsRouter } from "./routes/appointmentGroups.js";
 import { groomingLogsRouter } from "./routes/groomingLogs.js";
 import { settingsRouter } from "./routes/settings.js";
+import { getDb, businessSettings } from "@groombook/db";
 import { authMiddleware } from "./middleware/auth.js";
 import { devRouter } from "./routes/dev.js";
 import { startReminderScheduler } from "./services/reminders.js";
@@ -40,7 +41,6 @@ app.route("/api/dev", devRouter);
 
 // Public branding endpoint — no auth required, returns business name/colors/logo
 app.get("/api/branding", async (c) => {
-  const { getDb, businessSettings } = await import("@groombook/db");
   const db = getDb();
   const [row] = await db.select().from(businessSettings).limit(1);
   const settings = row ?? { businessName: "GroomBook", primaryColor: "#4f8a6f", accentColor: "#8b7355", logoBase64: null, logoMimeType: null };

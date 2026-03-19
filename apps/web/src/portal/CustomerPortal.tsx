@@ -224,7 +224,7 @@ export function CustomerPortal() {
                   className={`
                     w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
                     ${active
-                      ? "text-stone-800 font-semibold"
+                      ? "bg-stone-100 text-stone-800 font-semibold"
                       : "text-stone-600 hover:bg-stone-50 hover:text-stone-900"
                     }
                   `}

@@ -44,8 +44,9 @@ settingsRouter.patch(
     if (rows[0]) {
       settingsId = rows[0].id;
     } else {
-      const inserted = await db.insert(businessSettings).values({}).returning();
-      settingsId = inserted[0]!.id;
+      const [inserted] = await db.insert(businessSettings).values({}).returning();
+      if (!inserted) throw new Error("Failed to create default settings");
+      settingsId = inserted.id;
     }
 
     const [updated] = await db
