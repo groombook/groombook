@@ -1,4 +1,5 @@
-import { Routes, Route, Link, useLocation } from "react-router-dom";
+import { Routes, Route, Link, useLocation, Navigate } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { AppointmentsPage } from "./pages/Appointments.js";
 import { ClientsPage } from "./pages/Clients.js";
 import { ServicesPage } from "./pages/Services.js";
@@ -8,6 +9,8 @@ import { BookPage } from "./pages/Book.js";
 import { ReportsPage } from "./pages/Reports.js";
 import { GroupBookingPage } from "./pages/GroupBooking.js";
 import { CustomerPortal } from "./portal/CustomerPortal.js";
+import { DevLoginSelector, getDevUser } from "./pages/DevLoginSelector.js";
+import { DevSessionIndicator } from "./components/DevSessionIndicator.js";
 
 const NAV_LINKS = [
   { to: "/admin", label: "Appointments" },
@@ -105,14 +108,43 @@ function AdminLayout() {
 
 export function App() {
   const location = useLocation();
+  const [authDisabled, setAuthDisabled] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    fetch("/api/dev/config")
+      .then((r) => r.json())
+      .then((data) => setAuthDisabled(data.authDisabled === true))
+      .catch(() => setAuthDisabled(false));
+  }, []);
+
+  // Show login selector page
+  if (location.pathname === "/login") {
+    return <DevLoginSelector />;
+  }
+
+  // While checking auth config, render nothing briefly
+  if (authDisabled === null) return null;
+
+  // If auth is disabled and no dev user is selected, redirect to login selector
+  if (authDisabled && !getDevUser() && location.pathname !== "/login") {
+    return <Navigate to="/login" replace />;
+  }
 
   if (location.pathname.startsWith("/admin")) {
     return (
-      <Routes>
-        <Route path="/admin/*" element={<AdminLayout />} />
-      </Routes>
+      <>
+        <Routes>
+          <Route path="/admin/*" element={<AdminLayout />} />
+        </Routes>
+        {authDisabled && <DevSessionIndicator />}
+      </>
     );
   }
 
-  return <CustomerPortal />;
+  return (
+    <>
+      <CustomerPortal />
+      {authDisabled && <DevSessionIndicator />}
+    </>
+  );
 }

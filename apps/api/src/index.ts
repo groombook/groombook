@@ -13,6 +13,7 @@ import { reportsRouter } from "./routes/reports.js";
 import { appointmentGroupsRouter } from "./routes/appointmentGroups.js";
 import { groomingLogsRouter } from "./routes/groomingLogs.js";
 import { authMiddleware } from "./middleware/auth.js";
+import { devRouter } from "./routes/dev.js";
 import { startReminderScheduler } from "./services/reminders.js";
 
 const app = new Hono();
@@ -32,6 +33,9 @@ app.get("/health", (c) => c.json({ status: "ok" }));
 
 // Public booking routes — no auth required, must be registered before auth middleware
 app.route("/api/book", bookRouter);
+
+// Dev/demo routes — config is always public, users endpoint is guarded internally
+app.route("/api/dev", devRouter);
 
 // Protected API routes
 const api = app.basePath("/api");
