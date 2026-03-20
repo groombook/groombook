@@ -58,6 +58,24 @@ async function expireTimedOutSessions(staffId: string) {
   }
 }
 
+/**
+ * Check if an active session has expired by time. If so, mark it expired in DB
+ * and return true. Returns false if the session is still valid.
+ */
+async function checkAndExpireSession(
+  session: typeof impersonationSessions.$inferSelect
+): Promise<boolean> {
+  if (session.status !== "active") return false;
+  if (session.expiresAt > new Date()) return false;
+  const db = getDb();
+  const now = new Date();
+  await db
+    .update(impersonationSessions)
+    .set({ status: "expired", endedAt: now })
+    .where(eq(impersonationSessions.id, session.id));
+  return true;
+}
+
 // ─── POST / — Start a new impersonation session ─────────────────────────────
 
 const startSessionSchema = z.object({
@@ -132,11 +150,25 @@ impersonationRouter.post(
 
 impersonationRouter.get("/sessions/:id", async (c) => {
   const db = getDb();
+  const jwt = c.get("jwtPayload") as JwtPayload;
+  const staffRow = await resolveStaff(jwt.sub);
+  if (!staffRow) return c.json({ error: "Staff record not found" }, 403);
+
   const [session] = await db
     .select()
     .from(impersonationSessions)
     .where(eq(impersonationSessions.id, c.req.param("id")));
   if (!session) return c.json({ error: "Session not found" }, 404);
+  if (session.staffId !== staffRow.id) {
+    return c.json({ error: "Not your session" }, 403);
+  }
+
+  // Auto-expire if timed out
+  if (await checkAndExpireSession(session)) {
+    session.status = "expired";
+    session.endedAt = new Date();
+  }
+
   return c.json(session);
 });
 
@@ -158,6 +190,11 @@ impersonationRouter.post("/sessions/:id/extend", async (c) => {
   }
   if (session.status !== "active") {
     return c.json({ error: "Session is not active" }, 400);
+  }
+
+  // Check time-based expiry
+  if (await checkAndExpireSession(session)) {
+    return c.json({ error: "Session has expired" }, 400);
   }
 
   const newExpiry = expiresAt();
@@ -196,6 +233,11 @@ impersonationRouter.post("/sessions/:id/end", async (c) => {
     return c.json({ error: "Session is not active" }, 400);
   }
 
+  // Check time-based expiry
+  if (await checkAndExpireSession(session)) {
+    return c.json({ error: "Session has expired" }, 400);
+  }
+
   const now = new Date();
   const [updated] = await db
     .update(impersonationSessions)
@@ -224,15 +266,27 @@ impersonationRouter.post(
   zValidator("json", logEntrySchema),
   async (c) => {
     const db = getDb();
+    const jwt = c.get("jwtPayload") as JwtPayload;
     const body = c.req.valid("json");
+
+    const staffRow = await resolveStaff(jwt.sub);
+    if (!staffRow) return c.json({ error: "Staff record not found" }, 403);
 
     const [session] = await db
       .select()
       .from(impersonationSessions)
       .where(eq(impersonationSessions.id, c.req.param("id")));
     if (!session) return c.json({ error: "Session not found" }, 404);
+    if (session.staffId !== staffRow.id) {
+      return c.json({ error: "Not your session" }, 403);
+    }
     if (session.status !== "active") {
       return c.json({ error: "Session is not active" }, 400);
+    }
+
+    // Check time-based expiry
+    if (await checkAndExpireSession(session)) {
+      return c.json({ error: "Session has expired" }, 400);
     }
 
     const [entry] = await db
@@ -253,11 +307,18 @@ impersonationRouter.post(
 
 impersonationRouter.get("/sessions/:id/audit-log", async (c) => {
   const db = getDb();
+  const jwt = c.get("jwtPayload") as JwtPayload;
+  const staffRow = await resolveStaff(jwt.sub);
+  if (!staffRow) return c.json({ error: "Staff record not found" }, 403);
+
   const [session] = await db
     .select()
     .from(impersonationSessions)
     .where(eq(impersonationSessions.id, c.req.param("id")));
   if (!session) return c.json({ error: "Session not found" }, 404);
+  if (session.staffId !== staffRow.id) {
+    return c.json({ error: "Not your session" }, 403);
+  }
 
   const logs = await db
     .select()
