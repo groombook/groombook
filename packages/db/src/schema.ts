@@ -42,6 +42,11 @@ export const paymentMethodEnum = pgEnum("payment_method", [
   "other",
 ]);
 
+export const clientStatusEnum = pgEnum("client_status", [
+  "active",
+  "disabled",
+]);
+
 // ─── Tables ───────────────────────────────────────────────────────────────────
 
 export const clients = pgTable("clients", {
@@ -53,6 +58,8 @@ export const clients = pgTable("clients", {
   notes: text("notes"),
   // Set to true if the client has opted out of email reminders/notifications
   emailOptOut: boolean("email_opt_out").notNull().default(false),
+  status: clientStatusEnum("status").notNull().default("active"),
+  disabledAt: timestamp("disabled_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -250,6 +257,17 @@ export const impersonationAuditLogs = pgTable("impersonation_audit_logs", {
   pageVisited: text("page_visited"),
   metadata: jsonb("metadata").$type<Record<string, unknown>>(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const businessSettings = pgTable("business_settings", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  businessName: text("business_name").notNull().default("GroomBook"),
+  logoBase64: text("logo_base64"),
+  logoMimeType: text("logo_mime_type"),
+  primaryColor: text("primary_color").notNull().default("#4f8a6f"),
+  accentColor: text("accent_color").notNull().default("#8b7355"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
 export const groomingVisitLogs = pgTable("grooming_visit_logs", {

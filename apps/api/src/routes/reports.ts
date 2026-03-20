@@ -16,6 +16,11 @@ import {
 
 export const reportsRouter = new Hono();
 
+reportsRouter.onError((err, c) => {
+  console.error("[reports] unhandled error:", err);
+  return c.json({ error: "Internal server error", message: err.message }, 500);
+});
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function parseDate(value: string | undefined, fallback: Date): Date {
@@ -279,6 +284,7 @@ reportsRouter.get("/clients", async (c) => {
   // Clients with no appointment in last 90 days (churn risk)
   const ninetyDaysAgo = new Date();
   ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+  const ninetyDaysAgoISO = ninetyDaysAgo.toISOString();
 
   const churnRisk = await db
     .select({
@@ -290,7 +296,7 @@ reportsRouter.get("/clients", async (c) => {
     .leftJoin(appointments, eq(appointments.clientId, clients.id))
     .groupBy(clients.id, clients.name)
     .having(
-      sql`MAX(${appointments.startTime}) < ${ninetyDaysAgo} OR MAX(${appointments.startTime}) IS NULL`
+      sql`MAX(${appointments.startTime}) < ${ninetyDaysAgoISO}::timestamptz OR MAX(${appointments.startTime}) IS NULL`
     )
     .orderBy(sql`MAX(${appointments.startTime}) ASC NULLS FIRST`);
 

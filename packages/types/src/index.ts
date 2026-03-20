@@ -8,6 +8,8 @@ export type AppointmentStatus =
   | "cancelled"
   | "no_show";
 
+export type ClientStatus = "active" | "disabled";
+
 export interface Client {
   id: string;
   name: string;
@@ -16,6 +18,8 @@ export interface Client {
   address: string | null;
   notes: string | null;
   emailOptOut: boolean;
+  status: ClientStatus;
+  disabledAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -168,6 +172,17 @@ export interface ImpersonationAuditLog {
   pageVisited: string | null;
   metadata: Record<string, unknown> | null;
   createdAt: string;
+}
+
+export interface BusinessSettings {
+  id: string;
+  businessName: string;
+  logoBase64: string | null;
+  logoMimeType: string | null;
+  primaryColor: string;
+  accentColor: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // Paginated list response
