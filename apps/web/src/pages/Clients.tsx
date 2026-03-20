@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import type { Client, GroomingVisitLog, Pet } from "@groombook/types";
 
 // ─── Forms ───────────────────────────────────────────────────────────────────
@@ -42,7 +41,6 @@ const EMPTY_VISIT_LOG: VisitLogForm = { cutStyle: "", productsUsed: "", notes: "
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export function ClientsPage() {
-  const navigate = useNavigate();
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
