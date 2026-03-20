@@ -214,19 +214,29 @@ jobs:
           sed -i "s|ghcr.io/groombook/seed:${TAG_PATTERN}|ghcr.io/groombook/seed:${VERSION}|g" apps/groombook/seed-job.yaml
           sed -i "s|groombook.dev/image-version: \".*\"|groombook.dev/image-version: \"${VERSION}\"|g" apps/groombook/api.yaml apps/groombook/web.yaml
 
-      - name: Commit and push
+      - name: Create deploy PR
         env:
           VERSION: ${{ needs.docker.outputs.version }}
+          GH_TOKEN: ${{ secrets.INFRA_DEPLOY_TOKEN }}
         run: |
           cd infra
-          git config user.name "groombook-ci[bot]"
-          git config user.email "ci@groombook.dev"
           if git diff --quiet; then
             echo "No changes to commit"
             exit 0
           fi
+          BRANCH="deploy/v${VERSION}"
+          git config user.name "groombook-ci[bot]"
+          git config user.email "ci@groombook.dev"
+          git checkout -b "$BRANCH"
           git add -A
           git commit -m "deploy: update images to v${VERSION}
 
           Source: https://github.com/groombook/groombook/commit/${GITHUB_SHA}"
-          git push
+          git push origin "$BRANCH"
+          gh pr create \
+            --repo groombook/infra \
+            --head "$BRANCH" \
+            --title "deploy: update images to v${VERSION}" \
+            --body "Automated deploy PR — updates all image tags to \`${VERSION}\`.
+
+          Source commit: https://github.com/groombook/groombook/commit/${GITHUB_SHA}"
