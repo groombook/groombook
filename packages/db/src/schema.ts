@@ -218,6 +218,40 @@ export const reminderLogs = pgTable(
   (t) => [unique().on(t.appointmentId, t.reminderType)]
 );
 
+// ─── Impersonation ──────────────────────────────────────────────────────────
+
+export const impersonationSessionStatusEnum = pgEnum(
+  "impersonation_session_status",
+  ["active", "ended", "expired"]
+);
+
+export const impersonationSessions = pgTable("impersonation_sessions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  staffId: uuid("staff_id")
+    .notNull()
+    .references(() => staff.id, { onDelete: "restrict" }),
+  clientId: uuid("client_id")
+    .notNull()
+    .references(() => clients.id, { onDelete: "restrict" }),
+  reason: text("reason"),
+  status: impersonationSessionStatusEnum("status").notNull().default("active"),
+  startedAt: timestamp("started_at").notNull().defaultNow(),
+  endedAt: timestamp("ended_at"),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const impersonationAuditLogs = pgTable("impersonation_audit_logs", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  sessionId: uuid("session_id")
+    .notNull()
+    .references(() => impersonationSessions.id, { onDelete: "cascade" }),
+  action: text("action").notNull(),
+  pageVisited: text("page_visited"),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 export const groomingVisitLogs = pgTable("grooming_visit_logs", {
   id: uuid("id").primaryKey().defaultRandom(),
   petId: uuid("pet_id")

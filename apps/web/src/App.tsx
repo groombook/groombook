@@ -7,6 +7,7 @@ import { InvoicesPage } from "./pages/Invoices.js";
 import { BookPage } from "./pages/Book.js";
 import { ReportsPage } from "./pages/Reports.js";
 import { GroupBookingPage } from "./pages/GroupBooking.js";
+import { CustomerPortal } from "./portal/CustomerPortal.js";
 
 const NAV_LINKS = [
   { to: "/", label: "Appointments" },
@@ -21,6 +22,7 @@ const NAV_LINKS = [
 export function App() {
   const location = useLocation();
   return (
+    <CustomerPortal>
     <div style={{ minHeight: "100vh", fontFamily: "system-ui, sans-serif" }}>
       <nav
         style={{
@@ -83,5 +85,6 @@ export function App() {
         </Routes>
       </main>
     </div>
+    </CustomerPortal>
   );
 }
