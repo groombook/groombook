@@ -1,22 +1,21 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, act } from "@testing-library/react";
 import { ImpersonationBanner } from "../portal/ImpersonationBanner.js";
-import type { ImpersonationSession } from "../portal/mockData.js";
+import type { ImpersonationSession } from "@groombook/types";
 
 function makeSession(overrides: Partial<ImpersonationSession> = {}): ImpersonationSession {
   const now = new Date();
   const expires = new Date(now.getTime() + 30 * 60 * 1000); // 30 min from now
   return {
-    active: true,
-    staffName: "Jordan",
-    staffRole: "manager",
-    customerName: "Sarah Mitchell",
+    id: "session-uuid-1",
+    staffId: "staff-uuid-1",
+    clientId: "client-uuid-1",
     reason: "Customer requested help",
+    status: "active",
     startedAt: now.toISOString(),
+    endedAt: null,
     expiresAt: expires.toISOString(),
-    extended: false,
-    readOnly: true,
-    auditLog: [],
+    createdAt: now.toISOString(),
     ...overrides,
   };
 }
@@ -39,6 +38,7 @@ describe("ImpersonationBanner", () => {
     render(
       <ImpersonationBanner
         session={makeSession()}
+        isExtended={false}
         onEnd={onEnd}
         onExtend={onExtend}
         onShowAudit={onShowAudit}
@@ -47,34 +47,11 @@ describe("ImpersonationBanner", () => {
     expect(screen.getByText(/STAFF VIEW/)).toBeInTheDocument();
   });
 
-  it("shows the customer name", () => {
-    render(
-      <ImpersonationBanner
-        session={makeSession()}
-        onEnd={onEnd}
-        onExtend={onExtend}
-        onShowAudit={onShowAudit}
-      />
-    );
-    expect(screen.getByText("Sarah Mitchell")).toBeInTheDocument();
-  });
-
-  it("returns null when session is not active", () => {
-    const { container } = render(
-      <ImpersonationBanner
-        session={makeSession({ active: false })}
-        onEnd={onEnd}
-        onExtend={onExtend}
-        onShowAudit={onShowAudit}
-      />
-    );
-    expect(container.firstChild).toBeNull();
-  });
-
   it("calls onEnd when End Session is clicked", () => {
     render(
       <ImpersonationBanner
         session={makeSession()}
+        isExtended={false}
         onEnd={onEnd}
         onExtend={onExtend}
         onShowAudit={onShowAudit}
@@ -88,6 +65,7 @@ describe("ImpersonationBanner", () => {
     render(
       <ImpersonationBanner
         session={makeSession()}
+        isExtended={false}
         onEnd={onEnd}
         onExtend={onExtend}
         onShowAudit={onShowAudit}
@@ -104,6 +82,7 @@ describe("ImpersonationBanner", () => {
     render(
       <ImpersonationBanner
         session={session}
+        isExtended={false}
         onEnd={onEnd}
         onExtend={onExtend}
         onShowAudit={onShowAudit}
@@ -123,7 +102,8 @@ describe("ImpersonationBanner", () => {
     const expiresAt = new Date(Date.now() + 3 * 60 * 1000).toISOString();
     render(
       <ImpersonationBanner
-        session={makeSession({ expiresAt, extended: false })}
+        session={makeSession({ expiresAt })}
+        isExtended={false}
         onEnd={onEnd}
         onExtend={onExtend}
         onShowAudit={onShowAudit}
@@ -140,7 +120,8 @@ describe("ImpersonationBanner", () => {
     const expiresAt = new Date(Date.now() + 3 * 60 * 1000).toISOString();
     render(
       <ImpersonationBanner
-        session={makeSession({ expiresAt, extended: true })}
+        session={makeSession({ expiresAt })}
+        isExtended={true}
         onEnd={onEnd}
         onExtend={onExtend}
         onShowAudit={onShowAudit}

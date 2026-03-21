@@ -26,7 +26,7 @@ const DISABLED_CLIENT = {
 
 // ─── Queue-based mock DB ──────────────────────────────────────────────────────
 
-let selectRows: unknown[] = [];
+let selectRows: Record<string, unknown>[] = [];
 let insertedValues: Record<string, unknown>[] = [];
 let updatedValues: Record<string, unknown>[] = [];
 let deletedId: string | null = null;
