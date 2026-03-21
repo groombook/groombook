@@ -50,7 +50,7 @@ jobs:
 
   e2e:
     name: E2E Tests
-    runs-on: ubuntu-latest
+    runs-on: runners-groombook
     needs: [lint-typecheck, test]
     steps:
       - uses: actions/checkout@v4
