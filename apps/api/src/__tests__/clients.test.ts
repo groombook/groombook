@@ -267,6 +267,7 @@ describe("DELETE /clients/:id", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.ok).toBe(true);
+    expect(deletedId).toBe("client-uuid-1");
   });
 
   it("returns 404 when client not found", async () => {
