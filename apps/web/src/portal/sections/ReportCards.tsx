@@ -76,7 +76,7 @@ function ReportCardDetail({ card, onBack }: { card: ReportCard; onBack: () => vo
 
       <div className="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">
         {/* Header */}
-        <div className="bg-gradient-to-r from-(--color-accent-light) to-(--color-accent-light) p-6">
+        <div className="bg-gradient-to-r from-(--color-accent-lighter) to-(--color-accent-light) p-6">
           <div className="flex items-center justify-between mb-1">
             <h2 className="text-xl font-semibold text-stone-800">{card.petName}'s Grooming Report</h2>
             <button className="flex items-center gap-1.5 px-3 py-1.5 bg-white/80 text-stone-700 rounded-lg text-sm font-medium hover:bg-white">
