@@ -52,8 +52,8 @@ export function GlobalSearch() {
           setResults(data);
           setOpen(true);
         }
-      } catch {
-        // ignore fetch errors
+      } catch (err) {
+        console.warn("GlobalSearch: fetch error", err);
       } finally {
         setLoading(false);
       }
@@ -83,13 +83,13 @@ export function GlobalSearch() {
   function handleClientClick(client: ClientResult) {
     setOpen(false);
     setQuery("");
-    navigate("/admin/clients");
+    navigate(`/admin/clients?highlight=${client.id}`);
   }
 
   function handlePetClick(pet: PetResult) {
     setOpen(false);
     setQuery("");
-    navigate("/admin/clients");
+    navigate(`/admin/clients?highlight=${pet.clientId}`);
   }
 
   const hasResults = results && (results.clients.length > 0 || results.pets.length > 0);

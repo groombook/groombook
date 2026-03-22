@@ -34,16 +34,6 @@ vi.mock("@groombook/db", () => {
   const clients = tableProxy("clients");
   const pets = tableProxy("pets");
 
-  function makeSelectChain(results: unknown[]): unknown {
-    const chain: Record<string, unknown> = {};
-    const terminal = () => Promise.resolve(results);
-    chain.from = () => chain;
-    chain.innerJoin = () => chain;
-    chain.where = () => chain;
-    chain.limit = terminal;
-    return chain;
-  }
-
   return {
     getDb: () => ({
       select: (_fields?: unknown) => {
