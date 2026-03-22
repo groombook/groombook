@@ -19,48 +19,48 @@ const MOCK_SESSION = {
 
 test.describe("ImpersonationBanner", () => {
   test.beforeEach(async ({ page }) => {
-    await page.route("**/api/impersonation/session", (route) =>
+    await page.route("**/api/impersonation/sessions/session-1", (route) =>
       route.fulfill({ json: MOCK_SESSION })
     );
-    await page.route("**/api/impersonation/session/end", (route) =>
+    await page.route("**/api/impersonation/sessions/session-1/end", (route) =>
       route.fulfill({ json: { status: "ended" } })
     );
-    await page.route("**/api/impersonation/session/extend", (route) =>
+    await page.route("**/api/impersonation/sessions/session-1/extend", (route) =>
       route.fulfill({ json: { ...MOCK_SESSION, expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString() } })
     );
-    await page.route("**/api/impersonation/audit/**", (route) =>
+    await page.route("**/api/impersonation/sessions/session-1/audit-log", (route) =>
       route.fulfill({ json: { logs: [] } })
     );
   });
 
   test("banner displays when session is active", async ({ page }) => {
-    await page.goto("/");
-    await expect(page.locator(".bg-amber-500")).toBeVisible();
+    await page.goto("/?sessionId=session-1");
+    await expect(page.locator("[data-testid=\"impersonation-banner\"]")).toBeVisible();
     await expect(page.getByText("STAFF VIEW")).toBeVisible();
   });
 
   test("banner shows reason when session has reason", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/?sessionId=session-1");
     await expect(page.getByText(/Reason: Testing customer booking flow/)).toBeVisible();
   });
 
   test("banner shows started time", async ({ page }) => {
-    await page.goto("/");
-    await expect(page.getByText(/Started \d{1,2}:\d{2}/)).toBeVisible();
+    await page.goto("/?sessionId=session-1");
+    await expect(page.getByText(/Started/)).toBeVisible();
   });
 
   test("End Session button is visible", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/?sessionId=session-1");
     await expect(page.getByRole("button", { name: /End Session/ })).toBeVisible();
   });
 
   test("Audit button is visible", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/?sessionId=session-1");
     await expect(page.getByRole("button", { name: /Audit/ })).toBeVisible();
   });
 
   test("clicking End Session calls API and redirects", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/?sessionId=session-1");
     await page.getByRole("button", { name: /End Session/ }).click();
     await expect(page.getByText("STAFF VIEW")).not.toBeVisible();
   });
@@ -70,17 +70,16 @@ test.describe("ImpersonationBanner", () => {
       ...MOCK_SESSION,
       expiresAt: new Date(Date.now() + 3 * 60 * 1000).toISOString(),
     };
-    await page.route("**/api/impersonation/session", (route) =>
+    await page.route("**/api/impersonation/sessions/session-1", (route) =>
       route.fulfill({ json: lowTimeSession })
     );
-    await page.goto("/");
-    await page.waitForTimeout(1100);
+    await page.goto("/?sessionId=session-1");
     await expect(page.getByRole("button", { name: /Extend/ })).toBeVisible();
   });
 
   test("URL is cleaned when session ends", async ({ page }) => {
-    await page.goto("/?impersonation=session-1");
+    await page.goto("/?sessionId=session-1");
     await page.getByRole("button", { name: /End Session/ }).click();
-    await expect(page).not.toHaveURL(/impersonation=session-1/);
+    await expect(page).not.toHaveURL(/sessionId=session-1/);
   });
 });

@@ -14,6 +14,11 @@ test.describe("DevLoginSelector", () => {
   });
 
   test("shows loading state while fetching users", async ({ page }) => {
+    await page.route("**/api/dev/users", async (route) => {
+      await page.waitForResponse((res) => res.url().includes("/api/dev/users"));
+      await new Promise((r) => setTimeout(r, 100));
+      await route.fulfill({ json: { staff: [], clients: [] } });
+    });
     await page.goto("/login");
     await expect(page.getByText("Loading users...")).toBeVisible();
   });
