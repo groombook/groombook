@@ -140,6 +140,7 @@ export function buildAppointment(
     confirmedAt: null,
     cancelledAt: null,
     confirmationToken: null,
+    customerNotes: null,
     createdAt: new Date("2025-01-01T00:00:00Z"),
     updatedAt: new Date("2025-01-01T00:00:00Z"),
   };

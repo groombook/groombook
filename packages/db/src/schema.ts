@@ -169,6 +169,8 @@ export const appointments = pgTable("appointments", {
   cancelledAt: timestamp("cancelled_at"),
   // Token for tokenized email confirm/cancel links (no auth required)
   confirmationToken: text("confirmation_token").unique(),
+  // Customer-provided note visible to groomer (500 char max, editable until appointment starts)
+  customerNotes: text("customer_notes"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
