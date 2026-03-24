@@ -99,7 +99,6 @@ export function buildReminderEmail(
   const time = formatDateTime(data.startTime);
   const groomer = data.groomerName ? ` with ${data.groomerName}` : "";
   const when = hoursAhead >= 24 ? `tomorrow` : `in ${hoursAhead} hours`;
-  const baseUrl = process.env.APP_URL ?? "http://localhost:5173";
   const apiUrl = process.env.API_URL ?? "http://localhost:3000";
 
   const confirmUrl = confirmationToken ? `${apiUrl}/api/book/confirm/${confirmationToken}` : null;
