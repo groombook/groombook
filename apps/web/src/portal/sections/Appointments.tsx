@@ -9,13 +9,26 @@ interface Props {
   readOnly: boolean;
 }
 
-function formatDate(dateStr: string): string {
+export function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" });
 }
 
-function isUpcoming(appt: Appointment): boolean {
+export function parseTimeTo24Hour(time: string): string {
+  const parts = time.split(" ");
+  const hoursMinutes = parts[0] ?? "";
+  const period = parts[1] ?? "";
+  const [hoursStr, minutesStr] = hoursMinutes.split(":");
+  const hours = parseInt(hoursStr ?? "0", 10);
+  const minutes = parseInt(minutesStr ?? "0", 10);
+  let hours24 = hours;
+  if (period === "PM" && hours !== 12) hours24 += 12;
+  if (period === "AM" && hours === 12) hours24 = 0;
+  return `${hours24.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:00`;
+}
+
+export function isUpcoming(appt: Appointment): boolean {
   const now = new Date();
-  const apptDate = new Date(`${appt.date}T${appt.time}`);
+  const apptDate = new Date(`${appt.date}T${parseTimeTo24Hour(appt.time)}`);
   return apptDate > now && appt.status !== "cancelled" && appt.status !== "completed";
 }
 
@@ -172,7 +185,7 @@ function AppointmentCard({
   );
 }
 
-function CustomerNotesSection({ appointment: appt }: { appointment: Appointment }) {
+export function CustomerNotesSection({ appointment: appt }: { appointment: Appointment }) {
   const [notes, setNotes] = useState(appt.customerNotes || "");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -180,14 +193,23 @@ function CustomerNotesSection({ appointment: appt }: { appointment: Appointment 
 
   const isDisabled = appt.status === "completed" || appt.status === "cancelled";
 
+  function getSessionId(): string | null {
+    return sessionStorage.getItem("impersonationSessionId");
+  }
+
   async function handleSave() {
     setSaving(true);
     setError(null);
     setSaved(false);
     try {
+      const sessionId = getSessionId();
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (sessionId) {
+        headers["X-Impersonation-Session-Id"] = sessionId;
+      }
       const res = await fetch(`/api/portal/appointments/${appt.id}/notes`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({ customerNotes: notes }),
       });
       if (!res.ok) {
