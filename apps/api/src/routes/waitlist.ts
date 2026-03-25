@@ -4,6 +4,7 @@ import { z } from "zod";
 import {
   and,
   eq,
+  lt,
   getDb,
   waitlistEntries,
   clients,
@@ -14,6 +15,19 @@ import {
 import type { AppEnv } from "../middleware/rbac.js";
 
 export const waitlistRouter = new Hono<AppEnv>();
+
+async function markExpiredEntries(db: ReturnType<typeof getDb>, rows: typeof waitlistEntries.$inferSelect[]) {
+  const today = new Date().toISOString().split("T")[0];
+  const expiredIds = rows
+    .filter((r) => r.status === "active" && r.preferredDate < today)
+    .map((r) => r.id);
+  if (expiredIds.length > 0) {
+    await db
+      .update(waitlistEntries)
+      .set({ status: "expired", updatedAt: new Date() })
+      .where(and(eq(waitlistEntries.status, "active"), lt(waitlistEntries.preferredDate, today)));
+  }
+}
 
 const waitlistStatusEnum = z.enum(["active", "notified", "expired", "cancelled"]);
 
@@ -51,6 +65,10 @@ waitlistRouter.get("/", async (c) => {
           .from(waitlistEntries)
           .orderBy(waitlistEntries.createdAt);
 
+  await markExpiredEntries(db, rows);
+
+  const today = new Date().toISOString().split("T")[0];
+
   const enriched = await Promise.all(
     rows.map(async (entry) => {
       const [client] = await db
@@ -68,8 +86,10 @@ waitlistRouter.get("/", async (c) => {
         .from(services)
         .where(eq(services.id, entry.serviceId))
         .limit(1);
+      const isExpired = entry.status === "active" && entry.preferredDate < today;
       return {
         ...entry,
+        status: isExpired ? "expired" : entry.status,
         clientName: client?.name ?? null,
         clientEmail: client?.email ?? null,
         petName: pet?.name ?? null,
@@ -89,7 +109,14 @@ waitlistRouter.get("/:id", async (c) => {
     .where(eq(waitlistEntries.id, c.req.param("id")))
     .limit(1);
   if (!row) return c.json({ error: "Not found" }, 404);
-  return c.json(row);
+
+  await markExpiredEntries(db, [row]);
+  const today = new Date().toISOString().split("T")[0];
+  const isExpired = row.status === "active" && row.preferredDate < today;
+  return c.json({
+    ...row,
+    status: isExpired ? "expired" : row.status,
+  });
 });
 
 waitlistRouter.post(
