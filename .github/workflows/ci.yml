@@ -110,20 +110,23 @@ jobs:
   docker:
     name: Build & Push Docker Images
     runs-on: ubuntu-latest
-    needs: [build]
-    if: github.ref == 'refs/heads/main'
+    needs: [build, e2e]
     permissions:
       contents: read
       packages: write
     steps:
       - uses: actions/checkout@v4
 
-      - name: Generate version tag
+      - name: Generate image tag
         id: version
         run: |
-          TAG="$(date -u +%Y.%m.%d)-${GITHUB_SHA::7}"
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            TAG="pr-${{ github.event.pull_request.number }}"
+          else
+            TAG="$(date -u +%Y.%m.%d)-${GITHUB_SHA::7}"
+          fi
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-          echo "Image version: $TAG"
+          echo "Image tag: $TAG"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -144,7 +147,7 @@ jobs:
           push: true
           tags: |
             ghcr.io/groombook/api:${{ steps.version.outputs.tag }}
-            ghcr.io/groombook/api:latest
+            ${{ github.ref == 'refs/heads/main' && 'ghcr.io/groombook/api:latest' || '' }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -157,7 +160,7 @@ jobs:
           push: true
           tags: |
             ghcr.io/groombook/migrate:${{ steps.version.outputs.tag }}
-            ghcr.io/groombook/migrate:latest
+            ${{ github.ref == 'refs/heads/main' && 'ghcr.io/groombook/migrate:latest' || '' }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -170,7 +173,7 @@ jobs:
           push: true
           tags: |
             ghcr.io/groombook/seed:${{ steps.version.outputs.tag }}
-            ghcr.io/groombook/seed:latest
+            ${{ github.ref == 'refs/heads/main' && 'ghcr.io/groombook/seed:latest' || '' }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -182,6 +185,79 @@ jobs:
           push: true
           tags: |
             ghcr.io/groombook/web:${{ steps.version.outputs.tag }}
-            ghcr.io/groombook/web:latest
+            ${{ github.ref == 'refs/heads/main' && 'ghcr.io/groombook/web:latest' || '' }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  deploy-dev:
+    name: Deploy PR to groombook-dev
+    runs-on: runners-groombook
+    needs: [docker]
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Deploy to groombook-dev
+        env:
+          TAG: pr-${{ github.event.pull_request.number }}
+          PR_NUM: ${{ github.event.pull_request.number }}
+        run: |
+          echo "Deploying images tagged $TAG to groombook-dev..."
+
+          # Run migration with PR image
+          kubectl delete job migrate-schema -n groombook-dev --ignore-not-found
+          kubectl delete job "migrate-pr-$PR_NUM" -n groombook-dev --ignore-not-found
+          cat <<EOF | kubectl apply -n groombook-dev -f -
+          apiVersion: batch/v1
+          kind: Job
+          metadata:
+            name: migrate-pr-$PR_NUM
+          spec:
+            ttlSecondsAfterFinished: 3600
+            backoffLimit: 2
+            template:
+              spec:
+                restartPolicy: Never
+                containers:
+                - name: migrate
+                  image: ghcr.io/groombook/migrate:$TAG
+                  env:
+                  - name: DATABASE_URL
+                    valueFrom:
+                      secretKeyRef:
+                        name: groombook-postgres-credentials
+                        key: uri
+          EOF
+          kubectl wait --for=condition=complete "job/migrate-pr-$PR_NUM" \
+            -n groombook-dev --timeout=120s
+
+          # Update deployments
+          kubectl set image deployment/api api=ghcr.io/groombook/api:$TAG -n groombook-dev
+          kubectl set image deployment/web web=ghcr.io/groombook/web:$TAG -n groombook-dev
+
+          # Wait for rollout
+          kubectl rollout status deployment/api -n groombook-dev --timeout=120s
+          kubectl rollout status deployment/web -n groombook-dev --timeout=120s
+
+          echo "Deployment complete."
+
+      - name: Comment on PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.issue.number;
+            const tag = `pr-${pr}`;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr,
+              body: [
+                '## Deployed to groombook-dev',
+                '',
+                `**Images:** \`${tag}\``,
+                '**URL:** https://dev.groombook.farh.net',
+                '',
+                'Ready for UAT validation.'
+              ].join('\n')
+            });
