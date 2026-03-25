@@ -17,7 +17,7 @@ import type { AppEnv } from "../middleware/rbac.js";
 export const waitlistRouter = new Hono<AppEnv>();
 
 async function markExpiredEntries(db: ReturnType<typeof getDb>, rows: typeof waitlistEntries.$inferSelect[]) {
-  const today = new Date().toISOString().split("T")[0];
+  const today = new Date().toISOString().slice(0, 10);
   const expiredIds = rows
     .filter((r) => r.status === "active" && r.preferredDate < today)
     .map((r) => r.id);
@@ -67,7 +67,7 @@ waitlistRouter.get("/", async (c) => {
 
   await markExpiredEntries(db, rows);
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = new Date().toISOString().slice(0, 10);
 
   const enriched = await Promise.all(
     rows.map(async (entry) => {
@@ -111,7 +111,7 @@ waitlistRouter.get("/:id", async (c) => {
   if (!row) return c.json({ error: "Not found" }, 404);
 
   await markExpiredEntries(db, [row]);
-  const today = new Date().toISOString().split("T")[0];
+  const today = new Date().toISOString().slice(0, 10);
   const isExpired = row.status === "active" && row.preferredDate < today;
   return c.json({
     ...row,
