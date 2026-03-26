@@ -118,8 +118,7 @@ export function ClientsPage() {
       next.delete("highlight");
       return next;
     }, { replace: true });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams, clients, loading]);
+  }, [searchParams, clients, loading]); // selectClient is stable (defined in render scope)
 
   async function loadPets(clientId: string) {
     setPetsLoading(true);
