@@ -61,6 +61,8 @@ app.get("/api/branding", async (c) => {
 
 // Public iCal calendar feed — token auth in URL, no auth middleware required
 app.route("/api/calendar", calendarRouter);
+// Portal routes — no staff auth required, uses impersonation session for client auth
+app.route("/api/portal", portalRouter);
 
 // Protected API routes
 const api = app.basePath("/api");

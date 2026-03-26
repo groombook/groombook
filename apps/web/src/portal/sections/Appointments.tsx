@@ -1,14 +1,36 @@
 import { useState } from "react";
-import { Calendar, Clock, Plus, ChevronRight, ChevronDown, Search, Repeat } from "lucide-react";
+import { Calendar, Clock, Plus, ChevronRight, ChevronDown, Search, Repeat, Loader2 } from "lucide-react";
 import { UPCOMING_APPOINTMENTS, PAST_APPOINTMENTS, PETS, SERVICES, GROOMERS } from "../mockData.js";
 import type { Appointment, Pet, Service, Groomer } from "../mockData.js";
 
+const MAX_CUSTOMER_NOTES = 500;
+
 interface Props {
   readOnly: boolean;
+  sessionId?: string | null;
 }
 
-function formatDate(dateStr: string): string {
+export function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" });
+}
+
+export function parseTimeTo24Hour(time: string): string {
+  const parts = time.split(" ");
+  const hoursMinutes = parts[0] ?? "";
+  const period = parts[1] ?? "";
+  const [hoursStr, minutesStr] = hoursMinutes.split(":");
+  const hours = parseInt(hoursStr ?? "0", 10);
+  const minutes = parseInt(minutesStr ?? "0", 10);
+  let hours24 = hours;
+  if (period === "PM" && hours !== 12) hours24 += 12;
+  if (period === "AM" && hours === 12) hours24 = 0;
+  return `${hours24.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:00`;
+}
+
+export function isUpcoming(appt: Appointment): boolean {
+  const now = new Date();
+  const apptDate = new Date(`${appt.date}T${parseTimeTo24Hour(appt.time)}`);
+  return apptDate > now && appt.status !== "cancelled" && appt.status !== "completed";
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -19,7 +41,7 @@ const STATUS_COLORS: Record<string, string> = {
   cancelled: "bg-red-100 text-red-600",
 };
 
-export function AppointmentsSection({ readOnly }: Props) {
+export function AppointmentsSection({ readOnly, sessionId }: Props) {
   const [showBooking, setShowBooking] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [tab, setTab] = useState<"upcoming" | "past">("upcoming");
@@ -61,6 +83,7 @@ export function AppointmentsSection({ readOnly }: Props) {
               expanded={expandedId === appt.id}
               onToggle={() => setExpandedId(expandedId === appt.id ? null : appt.id)}
               readOnly={readOnly}
+              sessionId={sessionId}
             />
           ))}
           {UPCOMING_APPOINTMENTS.length === 0 && (
@@ -78,6 +101,7 @@ export function AppointmentsSection({ readOnly }: Props) {
               expanded={expandedId === appt.id}
               onToggle={() => setExpandedId(expandedId === appt.id ? null : appt.id)}
               readOnly={readOnly}
+              sessionId={sessionId}
             />
           ))}
         </div>
@@ -94,9 +118,9 @@ export function AppointmentsSection({ readOnly }: Props) {
 }
 
 function AppointmentCard({
-  appointment: appt, expanded, onToggle, readOnly,
+  appointment: appt, expanded, onToggle, readOnly, sessionId,
 }: {
-  appointment: Appointment; expanded: boolean; onToggle: () => void; readOnly: boolean;
+  appointment: Appointment; expanded: boolean; onToggle: () => void; readOnly: boolean; sessionId?: string | null;
 }) {
   return (
     <div className="bg-white rounded-xl border border-stone-200 shadow-sm overflow-hidden">
@@ -138,8 +162,11 @@ function AppointmentCard({
           {appt.notes && (
             <p className="text-sm text-stone-600 bg-stone-50 rounded-lg px-3 py-2 mb-3">{appt.notes}</p>
           )}
+          {isUpcoming(appt) && !readOnly && (
+            <CustomerNotesSection appointment={appt} sessionId={sessionId} />
+          )}
           {appt.status !== "completed" && appt.status !== "cancelled" && !readOnly && (
-            <div className="flex gap-2">
+            <div className="flex gap-2 mt-3">
               <button className="text-xs px-3 py-1.5 border border-stone-200 rounded-lg text-stone-600 hover:bg-stone-50">
                 Reschedule
               </button>
@@ -156,6 +183,73 @@ function AppointmentCard({
             </div>
           )}
         </div>
+      )}
+    </div>
+  );
+}
+
+export function CustomerNotesSection({ appointment: appt, sessionId }: { appointment: Appointment; sessionId?: string | null }) {
+  const [notes, setNotes] = useState(appt.customerNotes || "");
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const isDisabled = appt.status === "completed" || appt.status === "cancelled";
+
+  async function handleSave() {
+    setSaving(true);
+    setError(null);
+    setSaved(false);
+    try {
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (sessionId) {
+        headers["X-Impersonation-Session-Id"] = sessionId;
+      }
+      const res = await fetch(`/api/portal/appointments/${appt.id}/notes`, {
+        method: "PATCH",
+        headers,
+        body: JSON.stringify({ customerNotes: notes }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Failed to save" }));
+        throw new Error(err.error || `HTTP ${res.status}`);
+      }
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to save");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="mt-3 p-3 bg-stone-50 rounded-lg">
+      <div className="flex items-center justify-between mb-1.5">
+        <label className="text-xs font-medium text-stone-600">Notes for your groomer</label>
+        <span className={`text-xs ${notes.length > MAX_CUSTOMER_NOTES ? "text-red-500" : "text-stone-400"}`}>
+          {notes.length}/{MAX_CUSTOMER_NOTES}
+        </span>
+      </div>
+      <textarea
+        value={notes}
+        onChange={e => setNotes(e.target.value.slice(0, MAX_CUSTOMER_NOTES))}
+        disabled={isDisabled}
+        className="w-full text-sm border border-stone-200 rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-(--color-accent) disabled:bg-stone-100 disabled:text-stone-400"
+        rows={3}
+        placeholder="Any special requests or notes for this appointment..."
+      />
+      {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
+      {saved && <p className="text-xs text-green-600 mt-1">Saved!</p>}
+      {!isDisabled && (
+        <button
+          onClick={handleSave}
+          disabled={saving || notes === appt.customerNotes}
+          className="mt-2 flex items-center gap-1.5 text-xs px-3 py-1.5 bg-(--color-accent) text-white rounded-lg font-medium hover:bg-(--color-accent-hover) disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {saving && <Loader2 size={12} className="animate-spin" />}
+          {saving ? "Saving..." : "Save Notes"}
+        </button>
       )}
     </div>
   );
