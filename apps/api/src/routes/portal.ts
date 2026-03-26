@@ -7,7 +7,8 @@ import type { AppEnv } from "../middleware/rbac.js";
 export const portalRouter = new Hono<AppEnv>();
 
 const customerNotesSchema = z.object({
-  customerNotes: z.string().max(500),
+  // .min(1) prevents empty strings — clearing notes is not a supported use case
+  customerNotes: z.string().min(1).max(500),
 });
 
 portalRouter.patch(
@@ -64,6 +65,14 @@ portalRouter.patch(
       .where(eq(appointments.id, id))
       .returning();
 
-    return c.json(updated);
+    if (!updated) {
+      return c.json({ error: "Not found" }, 404);
+    }
+
+    return c.json({
+      id: updated.id,
+      customerNotes: updated.customerNotes,
+      updatedAt: updated.updatedAt,
+    });
   }
 );

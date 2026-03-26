@@ -46,6 +46,7 @@ function buildIcalFeed(
 
   for (const appt of appointments) {
     const status = appt.status === "cancelled" ? "CANCELLED" : "CONFIRMED";
+    const sequence = appt.status === "cancelled" ? "1" : "0";
     const summary = `${appt.petName ?? "Pet"} - ${appt.serviceName ?? "Appointment"}`;
     const description = `Client: ${appt.clientName ?? "Unknown"}\nPet: ${appt.petName ?? "Unknown"}\nService: ${appt.serviceName ?? "Unknown"}`;
 
@@ -58,6 +59,7 @@ function buildIcalFeed(
       `SUMMARY:${escapeIcalText(summary)}`,
       `DESCRIPTION:${escapeIcalText(description)}`,
       `STATUS:${status}`,
+      `SEQUENCE:${sequence}`,
       "END:VEVENT"
     );
   }
@@ -87,8 +89,22 @@ calendarRouter.get("/:staffId.ics", async (c) => {
 
   const now = new Date();
   const rows = await db
-    .select()
+    .select({
+      id: appointments.id,
+      startTime: appointments.startTime,
+      endTime: appointments.endTime,
+      status: appointments.status,
+      clientId: appointments.clientId,
+      petId: appointments.petId,
+      serviceId: appointments.serviceId,
+      clientName: clients.name,
+      petName: pets.name,
+      serviceName: services.name,
+    })
     .from(appointments)
+    .innerJoin(clients, eq(appointments.clientId, clients.id))
+    .innerJoin(pets, eq(appointments.petId, pets.id))
+    .innerJoin(services, eq(appointments.serviceId, services.id))
     .where(
       and(
         eq(appointments.staffId, staffId),
@@ -97,36 +113,10 @@ calendarRouter.get("/:staffId.ics", async (c) => {
     )
     .orderBy(appointments.startTime);
 
-  const enriched = await Promise.all(
-    rows.map(async (appt) => {
-      const [client] = await db
-        .select({ name: clients.name })
-        .from(clients)
-        .where(eq(clients.id, appt.clientId))
-        .limit(1);
-      const [pet] = await db
-        .select({ name: pets.name })
-        .from(pets)
-        .where(eq(pets.id, appt.petId))
-        .limit(1);
-      const [service] = await db
-        .select({ name: services.name })
-        .from(services)
-        .where(eq(services.id, appt.serviceId))
-        .limit(1);
-      return {
-        ...appt,
-        clientName: client?.name ?? null,
-        petName: pet?.name ?? null,
-        serviceName: service?.name ?? null,
-      };
-    })
-  );
-
-  const ical = buildIcalFeed(enriched, staffMember.name);
+  const ical = buildIcalFeed(rows, staffMember.name);
   return c.text(ical, 200, {
     "Content-Type": "text/calendar; charset=utf-8",
-    "Content-Disposition": `attachment; filename="${staffMember.name.replace(/\s+/g, "_")}_calendar.ics"`,
+    "Content-Disposition": `inline; filename="${staffMember.name.replace(/\s+/g, "_")}_calendar.ics"`,
   });
 });
 
