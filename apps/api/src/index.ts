@@ -22,6 +22,7 @@ import { getDb, businessSettings } from "@groombook/db";
 import { authMiddleware } from "./middleware/auth.js";
 import { resolveStaffMiddleware, requireRole } from "./middleware/rbac.js";
 import { devRouter } from "./routes/dev.js";
+import { adminSeedRouter } from "./routes/admin/seed.js";
 import { startReminderScheduler } from "./services/reminders.js";
 
 const app = new Hono();
@@ -42,6 +43,9 @@ app.get("/health", (c) => c.json({ status: "ok" }));
 // Public booking routes — no auth required, must be registered before auth middleware
 app.route("/api/book", bookRouter);
 
+// Public portal routes — client-facing, authenticated via impersonation session header
+app.route("/api/portal", portalRouter);
+
 // Dev/demo routes — config is always public, users endpoint is guarded internally
 app.route("/api/dev", devRouter);
 
@@ -61,9 +65,6 @@ app.get("/api/branding", async (c) => {
 
 // Public iCal calendar feed — token auth in URL, no auth middleware required
 app.route("/api/calendar", calendarRouter);
-// Portal routes — no staff auth required, uses impersonation session for client auth
-app.route("/api/portal", portalRouter);
-
 // Protected API routes
 const api = app.basePath("/api");
 api.use("*", authMiddleware);
@@ -116,7 +117,6 @@ api.route("/clients", clientsRouter);
 api.route("/pets", petsRouter);
 api.route("/services", servicesRouter);
 api.route("/appointments", appointmentsRouter);
-api.route("/portal", portalRouter);
 api.route("/waitlist", waitlistRouter);
 api.route("/staff", staffRouter);
 api.route("/invoices", invoicesRouter);
@@ -125,6 +125,7 @@ api.route("/appointment-groups", appointmentGroupsRouter);
 api.route("/grooming-logs", groomingLogsRouter);
 api.route("/impersonation", impersonationRouter);
 api.route("/admin/settings", settingsRouter);
+api.route("/admin/seed", adminSeedRouter);
 api.route("/search", searchRouter);
 
 const port = Number(process.env.PORT ?? 3000);
