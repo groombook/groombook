@@ -6,6 +6,7 @@ import { clientsRouter } from "./routes/clients.js";
 import { petsRouter } from "./routes/pets.js";
 import { servicesRouter } from "./routes/services.js";
 import { appointmentsRouter } from "./routes/appointments.js";
+import { portalRouter } from "./routes/portal.js";
 import { staffRouter } from "./routes/staff.js";
 import { invoicesRouter } from "./routes/invoices.js";
 import { bookRouter } from "./routes/book.js";
@@ -55,6 +56,9 @@ app.get("/api/branding", async (c) => {
     logoMimeType: settings.logoMimeType,
   });
 });
+
+// Portal routes — no staff auth required, uses impersonation session for client auth
+app.route("/api/portal", portalRouter);
 
 // Protected API routes
 const api = app.basePath("/api");
