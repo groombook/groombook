@@ -21,6 +21,7 @@ import { getDb, businessSettings } from "@groombook/db";
 import { authMiddleware } from "./middleware/auth.js";
 import { resolveStaffMiddleware, requireRole } from "./middleware/rbac.js";
 import { devRouter } from "./routes/dev.js";
+import { adminSeedRouter } from "./routes/admin/seed.js";
 import { startReminderScheduler } from "./services/reminders.js";
 
 const app = new Hono();
@@ -121,6 +122,7 @@ api.route("/appointment-groups", appointmentGroupsRouter);
 api.route("/grooming-logs", groomingLogsRouter);
 api.route("/impersonation", impersonationRouter);
 api.route("/admin/settings", settingsRouter);
+api.route("/admin/seed", adminSeedRouter);
 api.route("/search", searchRouter);
 
 const port = Number(process.env.PORT ?? 3000);
