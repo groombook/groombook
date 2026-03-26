@@ -86,7 +86,7 @@ const createWaitlistEntrySchema = z.object({
 });
 
 const updateWaitlistEntrySchema = z.object({
-  status: z.enum(["active", "notified", "expired", "cancelled"]).optional(),
+  status: z.literal("cancelled").optional(),
   preferredDate: z.string().optional(),
   preferredTime: z.string().optional(),
 });
