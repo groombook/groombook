@@ -42,6 +42,9 @@ app.get("/health", (c) => c.json({ status: "ok" }));
 // Public booking routes — no auth required, must be registered before auth middleware
 app.route("/api/book", bookRouter);
 
+// Public portal routes — client-facing, authenticated via impersonation session header
+app.route("/api/portal", portalRouter);
+
 // Dev/demo routes — config is always public, users endpoint is guarded internally
 app.route("/api/dev", devRouter);
 

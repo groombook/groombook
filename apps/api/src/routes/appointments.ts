@@ -484,7 +484,7 @@ appointmentsRouter.delete("/:id", async (c) => {
   const id = c.req.param("id");
   const cascade = c.req.query("cascade") ?? "this_only";
 
-    if (cascade === "this_and_future" || cascade === "all") {
+  if (cascade === "this_and_future" || cascade === "all") {
     const [current] = await db
       .select()
       .from(appointments)

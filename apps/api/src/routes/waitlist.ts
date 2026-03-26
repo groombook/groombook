@@ -1,6 +1,4 @@
 import { Hono } from "hono";
-import { zValidator } from "@hono/zod-validator";
-import { z } from "zod";
 import {
   and,
   eq,
@@ -10,39 +8,21 @@ import {
   clients,
   pets,
   services,
-  impersonationSessions,
 } from "@groombook/db";
 import type { AppEnv } from "../middleware/rbac.js";
 
 export const waitlistRouter = new Hono<AppEnv>();
 
-async function markExpiredEntries(db: ReturnType<typeof getDb>, rows: typeof waitlistEntries.$inferSelect[]) {
+async function markExpiredEntries(db: ReturnType<typeof getDb>, rows: { status: string; preferredDate: string }[]) {
   const today = new Date().toISOString().slice(0, 10);
-  const expiredIds = rows
-    .filter((r) => r.status === "active" && r.preferredDate < today)
-    .map((r) => r.id);
-  if (expiredIds.length > 0) {
+  const hasExpired = rows.some((r) => r.status === "active" && r.preferredDate < today);
+  if (hasExpired) {
     await db
       .update(waitlistEntries)
       .set({ status: "expired", updatedAt: new Date() })
       .where(and(eq(waitlistEntries.status, "active"), lt(waitlistEntries.preferredDate, today)));
   }
 }
-
-const waitlistStatusEnum = z.enum(["active", "notified", "expired", "cancelled"]);
-
-const createWaitlistEntrySchema = z.object({
-  petId: z.string().uuid(),
-  serviceId: z.string().uuid(),
-  preferredDate: z.string(),
-  preferredTime: z.string(),
-});
-
-const updateWaitlistEntrySchema = z.object({
-  status: waitlistStatusEnum.optional(),
-  preferredDate: z.string().optional(),
-  preferredTime: z.string().optional(),
-});
 
 waitlistRouter.get("/", async (c) => {
   const db = getDb();
@@ -53,50 +33,38 @@ waitlistRouter.get("/", async (c) => {
     conditions.push(eq(waitlistEntries.preferredDate, date));
   }
 
-  const rows =
-    conditions.length > 0
-      ? await db
-          .select()
-          .from(waitlistEntries)
-          .where(and(...conditions))
-          .orderBy(waitlistEntries.createdAt)
-      : await db
-          .select()
-          .from(waitlistEntries)
-          .orderBy(waitlistEntries.createdAt);
+  const rows = await db
+    .select({
+      id: waitlistEntries.id,
+      clientId: waitlistEntries.clientId,
+      petId: waitlistEntries.petId,
+      serviceId: waitlistEntries.serviceId,
+      preferredDate: waitlistEntries.preferredDate,
+      preferredTime: waitlistEntries.preferredTime,
+      status: waitlistEntries.status,
+      notifiedAt: waitlistEntries.notifiedAt,
+      expiresAt: waitlistEntries.expiresAt,
+      createdAt: waitlistEntries.createdAt,
+      updatedAt: waitlistEntries.updatedAt,
+      clientName: clients.name,
+      clientEmail: clients.email,
+      petName: pets.name,
+      serviceName: services.name,
+    })
+    .from(waitlistEntries)
+    .leftJoin(clients, eq(waitlistEntries.clientId, clients.id))
+    .leftJoin(pets, eq(waitlistEntries.petId, pets.id))
+    .leftJoin(services, eq(waitlistEntries.serviceId, services.id))
+    .where(conditions.length > 0 ? and(...conditions) : undefined)
+    .orderBy(waitlistEntries.createdAt);
 
   await markExpiredEntries(db, rows);
 
   const today = new Date().toISOString().slice(0, 10);
-
-  const enriched = await Promise.all(
-    rows.map(async (entry) => {
-      const [client] = await db
-        .select({ name: clients.name, email: clients.email })
-        .from(clients)
-        .where(eq(clients.id, entry.clientId))
-        .limit(1);
-      const [pet] = await db
-        .select({ name: pets.name })
-        .from(pets)
-        .where(eq(pets.id, entry.petId))
-        .limit(1);
-      const [service] = await db
-        .select({ name: services.name })
-        .from(services)
-        .where(eq(services.id, entry.serviceId))
-        .limit(1);
-      const isExpired = entry.status === "active" && entry.preferredDate < today;
-      return {
-        ...entry,
-        status: isExpired ? "expired" : entry.status,
-        clientName: client?.name ?? null,
-        clientEmail: client?.email ?? null,
-        petName: pet?.name ?? null,
-        serviceName: service?.name ?? null,
-      };
-    })
-  );
+  const enriched = rows.map((row) => ({
+    ...row,
+    status: row.status === "active" && row.preferredDate < today ? "expired" : row.status,
+  }));
 
   return c.json(enriched);
 });
@@ -117,145 +85,4 @@ waitlistRouter.get("/:id", async (c) => {
     ...row,
     status: isExpired ? "expired" : row.status,
   });
-});
-
-waitlistRouter.post(
-  "/",
-  zValidator("json", createWaitlistEntrySchema),
-  async (c) => {
-    const db = getDb();
-    const body = c.req.valid("json");
-    const sessionId = c.req.header("X-Impersonation-Session-Id");
-
-    let clientId: string | null = null;
-    if (sessionId) {
-      const [session] = await db
-        .select()
-        .from(impersonationSessions)
-        .where(
-          and(
-            eq(impersonationSessions.id, sessionId),
-            eq(impersonationSessions.status, "active")
-          )
-        )
-        .limit(1);
-      if (session && session.expiresAt > new Date()) {
-        clientId = session.clientId;
-      }
-    }
-
-    if (!clientId) {
-      return c.json({ error: "Unauthorized" }, 401);
-    }
-
-    const [entry] = await db
-      .insert(waitlistEntries)
-      .values({
-        clientId,
-        petId: body.petId,
-        serviceId: body.serviceId,
-        preferredDate: body.preferredDate,
-        preferredTime: body.preferredTime,
-      })
-      .returning();
-
-    return c.json(entry, 201);
-  }
-);
-
-waitlistRouter.patch(
-  "/:id",
-  zValidator("json", updateWaitlistEntrySchema),
-  async (c) => {
-    const db = getDb();
-    const id = c.req.param("id");
-    const body = c.req.valid("json");
-    const sessionId = c.req.header("X-Impersonation-Session-Id");
-
-    if (!sessionId) {
-      return c.json({ error: "Unauthorized" }, 401);
-    }
-
-    const [session] = await db
-      .select()
-      .from(impersonationSessions)
-      .where(
-        and(
-          eq(impersonationSessions.id, sessionId),
-          eq(impersonationSessions.status, "active")
-        )
-      )
-      .limit(1);
-
-    if (!session || session.expiresAt <= new Date()) {
-      return c.json({ error: "Unauthorized" }, 401);
-    }
-
-    const [existing] = await db
-      .select()
-      .from(waitlistEntries)
-      .where(eq(waitlistEntries.id, id))
-      .limit(1);
-
-    if (!existing) return c.json({ error: "Not found" }, 404);
-    if (existing.clientId !== session.clientId) {
-      return c.json({ error: "Forbidden" }, 403);
-    }
-
-    const updateData: Record<string, unknown> = { updatedAt: new Date() };
-    if (body.status !== undefined) updateData.status = body.status;
-    if (body.preferredDate !== undefined) updateData.preferredDate = body.preferredDate;
-    if (body.preferredTime !== undefined) updateData.preferredTime = body.preferredTime;
-
-    const [updated] = await db
-      .update(waitlistEntries)
-      .set(updateData)
-      .where(eq(waitlistEntries.id, id))
-      .returning();
-
-    return c.json(updated);
-  }
-);
-
-waitlistRouter.delete("/:id", async (c) => {
-  const db = getDb();
-  const id = c.req.param("id");
-  const sessionId = c.req.header("X-Impersonation-Session-Id");
-
-  if (!sessionId) {
-    return c.json({ error: "Unauthorized" }, 401);
-  }
-
-  const [session] = await db
-    .select()
-    .from(impersonationSessions)
-    .where(
-      and(
-        eq(impersonationSessions.id, sessionId),
-        eq(impersonationSessions.status, "active")
-      )
-    )
-    .limit(1);
-
-  if (!session || session.expiresAt <= new Date()) {
-    return c.json({ error: "Unauthorized" }, 401);
-  }
-
-  const [entry] = await db
-    .select()
-    .from(waitlistEntries)
-    .where(eq(waitlistEntries.id, id))
-    .limit(1);
-
-  if (!entry) return c.json({ error: "Not found" }, 404);
-  if (entry.clientId !== session.clientId) {
-    return c.json({ error: "Forbidden" }, 403);
-  }
-
-  await db
-    .delete(waitlistEntries)
-    .where(eq(waitlistEntries.id, id))
-    .returning();
-
-  return c.json({ ok: true });
 });

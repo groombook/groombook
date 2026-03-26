@@ -54,7 +54,7 @@ vi.mock("@groombook/db", () => {
     const arr = [...data];
     const chain = new Proxy(arr, {
       get(target, prop) {
-        if (prop === "where" || prop === "orderBy" || prop === "limit") {
+        if (prop === "where" || prop === "orderBy" || prop === "limit" || prop === "leftJoin") {
           return () => chain;
         }
         // @ts-expect-error proxy
@@ -87,6 +87,11 @@ vi.mock("@groombook/db", () => {
   const services = new Proxy(
     { _name: "services" },
     { get: (t, p) => (p === "_name" ? "services" : { table: "services", column: p }) }
+  );
+
+  const appointments = new Proxy(
+    { _name: "appointments" },
+    { get: (t, p) => (p === "_name" ? "appointments" : { table: "appointments", column: p }) }
   );
 
   return {
@@ -137,15 +142,19 @@ vi.mock("@groombook/db", () => {
     clients,
     pets,
     services,
+    appointments,
     eq: vi.fn(),
     and: vi.fn(),
+    lt: vi.fn(),
   };
 });
 
 const { waitlistRouter } = await import("../routes/waitlist.js");
+const { portalRouter } = await import("../routes/portal.js");
 
 const app = new Hono();
 app.route("/waitlist", waitlistRouter);
+app.route("/portal", portalRouter);
 
 function jsonRequest(method: string, path: string, body?: unknown, headers?: Record<string, string>) {
   return app.request(path, {
@@ -160,10 +169,10 @@ function jsonRequest(method: string, path: string, body?: unknown, headers?: Rec
 
 beforeEach(() => resetMock());
 
-describe("POST /waitlist", () => {
+describe("POST /portal/waitlist", () => {
   it("creates entry with valid session", async () => {
     selectSessionRow = ACTIVE_SESSION;
-    const res = await jsonRequest("POST", "/waitlist", {
+    const res = await jsonRequest("POST", "/portal/waitlist", {
       petId: VALID_UUID_3,
       serviceId: VALID_UUID_4,
       preferredDate: "2026-03-25",
@@ -176,7 +185,7 @@ describe("POST /waitlist", () => {
   });
 
   it("returns 401 without session", async () => {
-    const res = await jsonRequest("POST", "/waitlist", {
+    const res = await jsonRequest("POST", "/portal/waitlist", {
       petId: VALID_UUID_3,
       serviceId: VALID_UUID_4,
       preferredDate: "2026-03-25",
@@ -187,7 +196,7 @@ describe("POST /waitlist", () => {
 
   it("returns 401 with expired session", async () => {
     selectSessionRow = EXPIRED_SESSION;
-    const res = await jsonRequest("POST", "/waitlist", {
+    const res = await jsonRequest("POST", "/portal/waitlist", {
       petId: VALID_UUID_3,
       serviceId: VALID_UUID_4,
       preferredDate: "2026-03-25",
@@ -197,11 +206,11 @@ describe("POST /waitlist", () => {
   });
 });
 
-describe("DELETE /waitlist/:id", () => {
+describe("DELETE /portal/waitlist/:id", () => {
   it("deletes entry with valid session and correct owner", async () => {
     selectSessionRow = ACTIVE_SESSION;
     selectRows = [WAITLIST_ENTRY];
-    const res = await app.request(`/waitlist/${VALID_UUID_1}`, {
+    const res = await app.request(`/portal/waitlist/${VALID_UUID_1}`, {
       method: "DELETE",
       headers: { "X-Impersonation-Session-Id": VALID_UUID_5 },
     });
@@ -211,7 +220,7 @@ describe("DELETE /waitlist/:id", () => {
   });
 
   it("returns 401 without session", async () => {
-    const res = await app.request(`/waitlist/${VALID_UUID_1}`, {
+    const res = await app.request(`/portal/waitlist/${VALID_UUID_1}`, {
       method: "DELETE",
     });
     expect(res.status).toBe(401);
@@ -220,7 +229,7 @@ describe("DELETE /waitlist/:id", () => {
   it("returns 403 with valid session but wrong owner", async () => {
     selectSessionRow = { ...ACTIVE_SESSION, clientId: "other-client-uuid" };
     selectRows = [WAITLIST_ENTRY];
-    const res = await app.request(`/waitlist/${VALID_UUID_1}`, {
+    const res = await app.request(`/portal/waitlist/${VALID_UUID_1}`, {
       method: "DELETE",
       headers: { "X-Impersonation-Session-Id": VALID_UUID_5 },
     });
@@ -230,7 +239,7 @@ describe("DELETE /waitlist/:id", () => {
   it("returns 404 when entry not found", async () => {
     selectSessionRow = ACTIVE_SESSION;
     selectRows = [];
-    const res = await app.request("/waitlist/nonexistent", {
+    const res = await app.request("/portal/waitlist/nonexistent", {
       method: "DELETE",
       headers: { "X-Impersonation-Session-Id": VALID_UUID_5 },
     });
@@ -238,11 +247,11 @@ describe("DELETE /waitlist/:id", () => {
   });
 });
 
-describe("PATCH /waitlist/:id", () => {
+describe("PATCH /portal/waitlist/:id", () => {
   it("updates entry with valid session and correct owner", async () => {
     selectSessionRow = ACTIVE_SESSION;
     selectRows = [WAITLIST_ENTRY];
-    const res = await jsonRequest("PATCH", `/waitlist/${VALID_UUID_1}`, {
+    const res = await jsonRequest("PATCH", `/portal/waitlist/${VALID_UUID_1}`, {
       status: "notified",
     }, { "X-Impersonation-Session-Id": VALID_UUID_5 });
     expect(res.status).toBe(200);
@@ -250,7 +259,7 @@ describe("PATCH /waitlist/:id", () => {
   });
 
   it("returns 401 without session", async () => {
-    const res = await jsonRequest("PATCH", `/waitlist/${VALID_UUID_1}`, {
+    const res = await jsonRequest("PATCH", `/portal/waitlist/${VALID_UUID_1}`, {
       status: "notified",
     });
     expect(res.status).toBe(401);
@@ -259,7 +268,7 @@ describe("PATCH /waitlist/:id", () => {
   it("returns 403 with valid session but wrong owner", async () => {
     selectSessionRow = { ...ACTIVE_SESSION, clientId: "other-client-uuid" };
     selectRows = [WAITLIST_ENTRY];
-    const res = await jsonRequest("PATCH", `/waitlist/${VALID_UUID_1}`, {
+    const res = await jsonRequest("PATCH", `/portal/waitlist/${VALID_UUID_1}`, {
       status: "notified",
     }, { "X-Impersonation-Session-Id": VALID_UUID_5 });
     expect(res.status).toBe(403);
@@ -268,7 +277,7 @@ describe("PATCH /waitlist/:id", () => {
   it("returns 404 when entry not found", async () => {
     selectSessionRow = ACTIVE_SESSION;
     selectRows = [];
-    const res = await jsonRequest("PATCH", "/waitlist/nonexistent", {
+    const res = await jsonRequest("PATCH", "/portal/waitlist/nonexistent", {
       status: "notified",
     }, { "X-Impersonation-Session-Id": VALID_UUID_5 });
     expect(res.status).toBe(404);
