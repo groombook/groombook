@@ -36,11 +36,6 @@ export function DevLoginSelector() {
     navigate(type === "staff" ? "/admin" : "/");
   }
 
-  function skipLogin() {
-    localStorage.removeItem("dev-user");
-    navigate("/admin");
-  }
-
   if (loading) {
     return (
       <div style={containerStyle}>
@@ -94,11 +89,6 @@ export function DevLoginSelector() {
           ))}
         </div>
 
-        <div style={{ marginTop: "1.5rem", textAlign: "center" }}>
-          <button onClick={skipLogin} style={skipButtonStyle}>
-            Continue as default dev user
-          </button>
-        </div>
       </div>
     </div>
   );
@@ -156,14 +146,4 @@ const userButtonStyle: React.CSSProperties = {
   cursor: "pointer",
   textAlign: "left",
   transition: "border-color 0.15s, background 0.15s",
-};
-
-const skipButtonStyle: React.CSSProperties = {
-  padding: "0.5rem 1.25rem",
-  border: "1px solid #d1d5db",
-  borderRadius: 6,
-  background: "transparent",
-  cursor: "pointer",
-  fontSize: 13,
-  color: "#6b7280",
 };

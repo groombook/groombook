@@ -141,8 +141,8 @@ export function App() {
       .catch(() => setAuthDisabled(false));
   }, []);
 
-  // Show login selector page
-  if (location.pathname === "/login") {
+  // Show login selector page (only in development)
+  if (import.meta.env.DEV && location.pathname === "/login") {
     return <DevLoginSelector />;
   }
 

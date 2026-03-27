@@ -55,14 +55,6 @@ test.describe("DevLoginSelector", () => {
     expect(JSON.parse(devUser!)).toMatchObject({ type: "client", id: "client-1", name: "Carol Client" });
   });
 
-  test("skip login removes dev-user and navigates to /admin", async ({ page }) => {
-    await page.goto("/login");
-    await page.getByText("Continue as default dev user").click();
-    await expect(page).toHaveURL("/admin");
-    const devUser = await page.evaluate(() => localStorage.getItem("dev-user"));
-    expect(devUser).toBeNull();
-  });
-
   test("no users available shows empty sections", async ({ page }) => {
     await page.route("**/api/dev/users", (route) =>
       route.fulfill({ json: { staff: [], clients: [] } })
