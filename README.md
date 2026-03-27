@@ -1,18 +1,80 @@
-# Groom Book
+# GroomBook
 
-Open source, self-hostable pet grooming business management and customer relationship platform.
+> **Built for groomers, not corporations.**
+
+GroomBook is the open-source scheduling and client management platform built specifically for independent pet groomers — giving you the tools of enterprise software without the enterprise price tag or vendor lock-in.
+
+**[Try the Live Demo →](https://groombook.farh.net)**
+
+---
+
+## Why GroomBook?
+
+Independent groomers are stuck using paper books, spreadsheets, or generic scheduling tools that weren't built for pet care. GroomBook is purpose-built for the way grooming shops actually work: managing pets and their owners, filling cancelled slots automatically, and giving clients a way to confirm without calling the shop.
+
+- **Open source** — you own your data, no vendor lock-in
+- **Self-hostable** — run it yourself for free, or use low-cost hosting
+- **Purpose-built for groomers** — pet records, appointment notes, breed-aware workflows
+
+---
 
 ## Features
 
-- **Appointment scheduling** — calendar management for single or multiple groomers
-- **Client & pet records** — detailed profiles with grooming history and preferences
-- **Service management** — pricing, duration, and service catalog
-- **Online booking portal** — customer-facing self-service booking
-- **POS & invoicing** — payments, tips, and receipt generation
-- **Automated reminders** — SMS and email notifications
-- **Reporting dashboard** — revenue, utilization, and trend analytics
-- **Staff impersonation** — managers can view the customer portal as any client, with full audit logging and session controls
-- **PWA** — installable on mobile devices, works offline
+- **iCal calendar feed** — push GroomBook appointments directly into Google Calendar or Apple Calendar. No app switching, works with the tools you already use.
+- **Waitlist system** — automatically fill cancelled slots from your waitlist. Reduce no-show revenue loss without lifting a finger.
+- **Quick-find client & pet search** — instantly surface any client or pet by name. Never lose context on a regular — full history at a glance.
+- **Customer portal** — clients confirm or cancel appointments on their own without calling the shop. Less phone tag, fewer no-shows.
+- **Appointment notes** — add per-appointment notes for breed quirks, grooming preferences, or anything your staff needs to know next time.
+- **RBAC (role-based access control)** — front desk sees bookings; only you see financials. Right access for every role in your shop.
+
+---
+
+## Live Demo
+
+Try the full groomer and customer experience at **[groombook.farh.net](https://groombook.farh.net)**. Log in with demo credentials to explore the scheduler, customer portal, and staff views.
+
+---
+
+## Quick Start (Docker Compose)
+
+The fastest way to run GroomBook is with Docker Compose. This starts PostgreSQL, runs database migrations, and serves both the API and web frontend.
+
+```bash
+git clone https://github.com/groombook/groombook.git
+cd groombook
+
+# Start everything (Postgres + migrate + API + web)
+docker compose up --build
+```
+
+- **Web UI**: http://localhost:8080
+- **API**: http://localhost:3000
+
+The default `docker-compose.yml` sets `AUTH_DISABLED=true` so you can explore the app without configuring an OIDC provider. **Disable this in any internet-facing deployment.**
+
+### Production configuration
+
+Copy `.env.example` to `.env` and configure:
+
+```bash
+cp .env.example .env
+```
+
+Key variables to update for production:
+
+| Variable | Description |
+|---|---|
+| `DATABASE_URL` | PostgreSQL connection string |
+| `AUTH_DISABLED` | Set to `false` in production |
+| `OIDC_ISSUER` | Authentik issuer URL |
+| `OIDC_AUDIENCE` | OAuth2 audience (default: `groombook`) |
+| `CORS_ORIGIN` | Public URL of the web frontend |
+
+```bash
+docker compose --env-file .env up --build
+```
+
+---
 
 ## Tech Stack
 
@@ -40,15 +102,15 @@ groombook/
 └── docker-compose.yml
 ```
 
-## Getting Started
+---
+
+## Local Development
 
 ### Prerequisites
 
 - Node.js >= 20
 - pnpm >= 9 (`npm install -g pnpm`)
 - Docker & Docker Compose (for local Postgres)
-
-### Local Development
 
 ```bash
 # Clone the repo
@@ -68,20 +130,7 @@ DATABASE_URL=postgres://groombook:groombook@localhost:5432/groombook pnpm db:mig
 pnpm dev
 ```
 
-API will be available at http://localhost:3000
-Web will be available at http://localhost:5173
-
-### Environment Variables
-
-#### API (`apps/api/.env`)
-
-```env
-DATABASE_URL=postgres://groombook:groombook@localhost:5432/groombook
-OIDC_ISSUER=https://authentik.example.com
-OIDC_AUDIENCE=groombook
-CORS_ORIGIN=http://localhost:5173
-PORT=3000
-```
+API: http://localhost:3000 | Web: http://localhost:5173
 
 ### Running Tests
 
@@ -89,18 +138,10 @@ PORT=3000
 # Unit tests (vitest)
 pnpm test
 
-# E2E tests (Playwright) — requires the full Docker Compose stack to be running
+# E2E tests (Playwright) — requires the full Docker Compose stack
 docker compose up -d --wait
 pnpm --filter @groombook/e2e test
-
-# Open the Playwright UI (interactive test runner)
-pnpm --filter @groombook/e2e test:ui
-
-# View the last E2E test report
-pnpm --filter @groombook/e2e test:report
 ```
-
-E2E tests target the Docker Compose stack (`http://localhost:8080`). They use API route mocking where needed so happy-path tests are deterministic without requiring seed data.
 
 ### Building
 
@@ -108,57 +149,13 @@ E2E tests target the Docker Compose stack (`http://localhost:8080`). They use AP
 pnpm build
 ```
 
-## Self-Hosting
+---
 
-### Docker Compose (recommended for single-server deployments)
-
-The fastest way to run Groom Book is with Docker Compose. This starts PostgreSQL, runs database migrations, and serves both the API and web frontend.
-
-```bash
-git clone https://github.com/groombook/groombook.git
-cd groombook
-
-# Start everything (Postgres + migrate + API + web)
-docker compose up --build
-```
-
-- **Web UI**: http://localhost:8080
-- **API**: http://localhost:3000
-
-The default `docker-compose.yml` sets `AUTH_DISABLED=true` so you can explore the app without configuring an OIDC provider. **Disable this in any internet-facing deployment.**
-
-#### Production configuration
-
-Copy `.env.example` to `.env` and configure:
-
-```bash
-cp .env.example .env
-```
-
-Key variables to update for production:
-
-| Variable | Description |
-|---|---|
-| `DATABASE_URL` | PostgreSQL connection string |
-| `AUTH_DISABLED` | Set to `false` in production |
-| `OIDC_ISSUER` | Authentik issuer URL |
-| `OIDC_AUDIENCE` | OAuth2 audience (default: `groombook`) |
-| `CORS_ORIGIN` | Public URL of the web frontend |
-
-To use your `.env` file with Docker Compose:
-
-```bash
-docker compose --env-file .env up --build
-```
-
-### Kubernetes (production-grade deployments)
+## Self-Hosting on Kubernetes
 
 See the [groombook/infra](https://github.com/groombook/infra) repository for Kubernetes manifests and Flux configuration.
 
-Groom Book is deployed in the `groombook` Kubernetes namespace using:
-- **CNPG** for PostgreSQL
-- **Authentik** for OIDC authentication
-- **Flux** for GitOps-managed deployments
+---
 
 ## Contributing
 
@@ -167,7 +164,7 @@ Groom Book is deployed in the `groombook` Kubernetes namespace using:
 3. Commit your changes
 4. Open a pull request
 
-All PRs require CI to pass before merge.
+All PRs require CI to pass before merge. See [CONTRIBUTING.md](CONTRIBUTING.md) for full guidelines.
 
 ## License
 
