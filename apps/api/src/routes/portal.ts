@@ -135,10 +135,10 @@ portalRouter.post("/appointments/:id/confirm", async (c) => {
     .returning();
 
   return c.json({
-    id: updated.id,
-    confirmationStatus: updated.confirmationStatus,
-    confirmedAt: updated.confirmedAt,
-    updatedAt: updated.updatedAt,
+    id: updated!.id,
+    confirmationStatus: updated!.confirmationStatus,
+    confirmedAt: updated!.confirmedAt,
+    updatedAt: updated!.updatedAt,
   });
 });
 
@@ -195,11 +195,11 @@ portalRouter.post("/appointments/:id/cancel", async (c) => {
     .returning();
 
   return c.json({
-    id: updated.id,
-    status: updated.status,
-    confirmationStatus: updated.confirmationStatus,
-    cancelledAt: updated.cancelledAt,
-    updatedAt: updated.updatedAt,
+    id: updated!.id,
+    status: updated!.status,
+    confirmationStatus: updated!.confirmationStatus,
+    cancelledAt: updated!.cancelledAt,
+    updatedAt: updated!.updatedAt,
   });
 });
 
