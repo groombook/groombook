@@ -1,13 +1,12 @@
 import type { MiddlewareHandler } from "hono";
 import { eq, getDb, staff } from "@groombook/db";
-import type { JwtPayload } from "./auth.js";
 
 export type StaffRole = "groomer" | "receptionist" | "manager";
 export type StaffRow = typeof staff.$inferSelect;
 
 export interface AppEnv {
   Variables: {
-    jwtPayload: JwtPayload;
+    jwtPayload: { sub: string; email?: string; name?: string };
     staff: StaffRow;
   };
 }
@@ -16,8 +15,8 @@ export interface AppEnv {
  * Resolves the authenticated staff record from the DB and stores it in context.
  * Must be applied after authMiddleware on all protected routes.
  *
- * Dev mode (AUTH_DISABLED=true): resolves staff by X-Dev-User-Id header (treated
- * as oidcSub), or falls back to the first manager in the DB.
+ * Dev mode (AUTH_DISABLED=true): resolves staff by X-Dev-User-Id header (Better-Auth
+ * user ID), or falls back to the first manager in the DB.
  */
 export const resolveStaffMiddleware: MiddlewareHandler<AppEnv> = async (
   c,
@@ -41,11 +40,11 @@ export const resolveStaffMiddleware: MiddlewareHandler<AppEnv> = async (
       await next();
       return;
     }
-    // Treat X-Dev-User-Id as the oidcSub
+    // Treat X-Dev-User-Id as the Better-Auth user ID
     const [row] = await db
       .select()
       .from(staff)
-      .where(eq(staff.oidcSub, devUserId));
+      .where(eq(staff.userId, devUserId));
     if (!row) {
       return c.json(
         { error: "Forbidden: no staff record found for X-Dev-User-Id" },
@@ -61,7 +60,7 @@ export const resolveStaffMiddleware: MiddlewareHandler<AppEnv> = async (
   const [row] = await db
     .select()
     .from(staff)
-    .where(eq(staff.oidcSub, jwt.sub));
+    .where(eq(staff.userId, jwt.sub));
   if (!row) {
     return c.json(
       { error: "Forbidden: no staff record found for authenticated user" },
