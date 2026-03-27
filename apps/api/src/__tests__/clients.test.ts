@@ -105,6 +105,10 @@ vi.mock("@groombook/db", () => {
 const { clientsRouter } = await import("../routes/clients.js");
 
 const app = new Hono();
+app.use("*", async (c, next) => {
+  c.set("staff", { id: "staff-uuid-1", role: "manager" } as never);
+  await next();
+});
 app.route("/clients", clientsRouter);
 
 function jsonRequest(method: string, path: string, body?: unknown) {
