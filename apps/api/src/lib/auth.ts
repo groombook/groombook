@@ -9,6 +9,12 @@ const OIDC_CLIENT_SECRET = process.env.OIDC_CLIENT_SECRET;
 const BETTER_AUTH_SECRET = process.env.BETTER_AUTH_SECRET;
 const BETTER_AUTH_URL = process.env.BETTER_AUTH_URL ?? "http://localhost:3000";
 
+if (!BETTER_AUTH_SECRET && process.env.AUTH_DISABLED !== "true") {
+  throw new Error(
+    "[FATAL] BETTER_AUTH_SECRET environment variable is required when auth is enabled"
+  );
+}
+
 export const auth = betterAuth({
   database: drizzleAdapter(getDb(), {
     provider: "pg",
