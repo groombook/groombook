@@ -150,6 +150,12 @@ describe("Dev login selector", () => {
           }),
         } as Response);
       }
+      if (url === "/api/auth/get-session") {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ user: null }),
+        } as Response);
+      }
       return Promise.resolve({ ok: true, json: async () => [] } as Response);
     }) as unknown as typeof fetch;
 
