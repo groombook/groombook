@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, within, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { App } from "../App.tsx";
+import { App } from "../App";
 
 
 // Mock fetch to return appropriate responses based on URL
