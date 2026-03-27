@@ -44,6 +44,32 @@ async function renderApp(route = "/admin") {
 }
 
 describe("App navigation", () => {
+  // Use authDisabled=true (dev mode) so nav renders without needing Better Auth useSession() mock
+  beforeEach(() => {
+    localStorage.setItem("dev-user", JSON.stringify({ type: "staff", id: "s1", name: "Sarah" }));
+    global.fetch = vi.fn((url: string) => {
+      if (url === "/api/dev/config") {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ authDisabled: true }),
+        } as Response);
+      }
+      if (url === "/api/branding") {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            businessName: "GroomBook",
+            primaryColor: "#4f8a6f",
+            accentColor: "#8b7355",
+            logoBase64: null,
+            logoMimeType: null,
+          }),
+        } as Response);
+      }
+      return Promise.resolve({ ok: true, json: async () => [] } as Response);
+    }) as unknown as typeof fetch;
+  });
+
   it("renders the Groom Book brand", async () => {
     const nav = await renderApp();
     expect(
