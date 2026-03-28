@@ -127,6 +127,13 @@
       "when": 1774512000000,
       "tag": "0017_better_auth_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1774598400000,
+      "tag": "0018_backfill_staff_user_id",
+      "breakpoints": true
     }
   ]
 }

@@ -40,18 +40,29 @@ export const resolveStaffMiddleware: MiddlewareHandler<AppEnv> = async (
       await next();
       return;
     }
-    // Treat X-Dev-User-Id as the staff database id (the frontend stores staff.id)
+    // Treat X-Dev-User-Id as the Better-Auth user ID first
     const [row] = await db
       .select()
       .from(staff)
+      .where(eq(staff.userId, devUserId));
+    if (row) {
+      c.set("staff", row);
+      await next();
+      return;
+    }
+    // Fallback: if userId is null, treat X-Dev-User-Id as staff.id (dev login
+    // may send the primary key for staff records that predate the userId field)
+    const [fallbackRow] = await db
+      .select()
+      .from(staff)
       .where(eq(staff.id, devUserId));
-    if (!row) {
+    if (!fallbackRow) {
       return c.json(
         { error: "Forbidden: no staff record found for X-Dev-User-Id" },
         403
       );
     }
-    c.set("staff", row);
+    c.set("staff", fallbackRow);
     await next();
     return;
   }
@@ -61,13 +72,23 @@ export const resolveStaffMiddleware: MiddlewareHandler<AppEnv> = async (
     .select()
     .from(staff)
     .where(eq(staff.userId, jwt.sub));
-  if (!row) {
+  if (row) {
+    c.set("staff", row);
+    await next();
+    return;
+  }
+  // Fallback: staff records that predate the userId field may still have oidcSub
+  const [fallbackRow] = await db
+    .select()
+    .from(staff)
+    .where(eq(staff.oidcSub, jwt.sub));
+  if (!fallbackRow) {
     return c.json(
       { error: "Forbidden: no staff record found for authenticated user" },
       403
     );
   }
-  c.set("staff", row);
+  c.set("staff", fallbackRow);
   await next();
 };
 
