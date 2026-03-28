@@ -342,8 +342,8 @@ jobs:
           gh pr create \
             --repo groombook/infra \
             --base main \
-            --head "groombook-engineer[bot]:chore/update-image-tags-${TAG}" \
+            --head "chore/update-image-tags-${TAG}" \
             --title "chore: update image tags to ${TAG}" \
             --body "[GRO-178](/d50d9792/issues/GRO-178) — automated image tag update from main merge" \
-            --auto-merges-branch=main \
+            --enable-auto-merge \
             2>&1 || echo "PR creation attempted"
