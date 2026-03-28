@@ -177,8 +177,9 @@ function AppointmentCard({
           {appt.status !== "completed" && appt.status !== "cancelled" && !readOnly && (
             <div className="flex gap-2 mt-3">
               <button
+                type="button"
                 disabled
-                title="Rescheduling coming soon"
+                title="Rescheduling — coming soon"
                 className="text-xs px-3 py-1.5 border border-stone-200 rounded-lg text-stone-400 cursor-not-allowed"
               >
                 Reschedule
