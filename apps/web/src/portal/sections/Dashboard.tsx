@@ -1,9 +1,12 @@
 import { Calendar, Clock, PawPrint, CreditCard, Star, ChevronRight, AlertTriangle } from "lucide-react";
 import { PETS, UPCOMING_APPOINTMENTS, PAST_APPOINTMENTS, INVOICES, LOYALTY, BUSINESS_NAME } from "../mockData.js";
+import type { Appointment } from "../mockData.js";
 
 interface Props {
   onNavigate: (section: "appointments" | "pets" | "billing" | "reports") => void;
   readOnly: boolean;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  onReschedule?: (appointment: any) => void;
 }
 
 function daysUntil(dateStr: string): number {
@@ -18,7 +21,7 @@ function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 }
 
-export function Dashboard({ onNavigate, readOnly }: Props) {
+export function Dashboard({ onNavigate, readOnly, onReschedule }: Props) {
   const nextAppt = UPCOMING_APPOINTMENTS[0];
   const outstanding = INVOICES.filter(i => i.status === "outstanding").reduce((sum, i) => sum + i.amount, 0);
   const recentEvents = [
@@ -77,7 +80,10 @@ export function Dashboard({ onNavigate, readOnly }: Props) {
           </div>
           {!readOnly && (
             <div className="flex gap-2 mt-4">
-              <button className="text-sm px-3 py-1.5 border border-stone-200 rounded-lg text-stone-600 hover:bg-stone-50">
+              <button
+                onClick={() => onReschedule?.(nextAppt)}
+                className="text-sm px-3 py-1.5 border border-stone-200 rounded-lg text-stone-600 hover:bg-stone-50"
+              >
                 Reschedule
               </button>
               <button className="text-sm px-3 py-1.5 border border-stone-200 rounded-lg text-stone-600 hover:bg-stone-50">
