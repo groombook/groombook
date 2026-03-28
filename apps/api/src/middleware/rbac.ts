@@ -41,11 +41,11 @@ export const resolveStaffMiddleware: MiddlewareHandler<AppEnv> = async (
       await next();
       return;
     }
-    // Treat X-Dev-User-Id as the oidcSub
+    // Treat X-Dev-User-Id as the staff database id (the frontend stores staff.id)
     const [row] = await db
       .select()
       .from(staff)
-      .where(eq(staff.oidcSub, devUserId));
+      .where(eq(staff.id, devUserId));
     if (!row) {
       return c.json(
         { error: "Forbidden: no staff record found for X-Dev-User-Id" },
