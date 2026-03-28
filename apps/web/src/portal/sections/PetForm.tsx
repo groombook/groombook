@@ -16,8 +16,31 @@ export function PetForm({ pet, onSave, onCancel }: Props) {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!pet) return;
-    onSave({ ...pet, name, breed, weight, allergies: notes });
+    if (pet) {
+      onSave({ ...pet, name, breed, weight, allergies: notes });
+    } else {
+      onSave({
+        id: crypto.randomUUID(),
+        name,
+        breed,
+        weight,
+        dob: "",
+        sex: "male",
+        spayedNeutered: false,
+        photo: "🐾",
+        allergies: notes,
+        skinConditions: "",
+        anxietyTriggers: "",
+        aggressionNotes: "",
+        mobilityIssues: "",
+        medications: "",
+        preferredCut: "",
+        shampooPreference: "",
+        sensitiveAreas: "",
+        standingInstructions: "",
+        vaccinations: [],
+      });
+    }
   }
 
   return (
